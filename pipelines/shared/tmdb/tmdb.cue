@@ -1,5 +1,7 @@
 package tmdb
 
+import units "pipelines.lokal/shared/units"
+
 #CommonTopic: {
 	embed?:     string
 	detail:     string
@@ -20,7 +22,7 @@ package tmdb
 }
 
 #Ingest: {
-	batch_size: string
+	batch_size: units.#Size
 }
 
 #Resource: {

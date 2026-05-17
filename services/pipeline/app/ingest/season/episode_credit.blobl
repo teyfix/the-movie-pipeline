@@ -1,0 +1,33 @@
+root = this.data.episodes.
+  map_each(e -> e.
+      with("crew").
+      assign({ "cast": e.guest_stars }).
+      key_values().
+      map_each(kv -> kv.value.
+        map_each(c -> if c.id != null {
+          {
+            "credit_id" : "00000000%s".format(c.credit_id),
+            "person_id": c.id,
+            "kind" : kv.key,
+            "guest": kv.key == "cast",
+            "title_id": e.id,
+            "title_kind": "episode",
+            "version_ts": this.meta.ts,
+          }
+        } else {
+          {
+            "~error": {
+              "message": "discarding invalid episode credit",
+              "detail": {
+                "kind": kv.key,
+                "title_id": e.id,
+                "title_kind": "episode",
+              },
+              "payload": c,
+            }
+          }
+        })
+      ).
+      flatten()
+  ).
+  flatten()

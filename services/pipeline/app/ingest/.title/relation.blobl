@@ -1,0 +1,14 @@
+root = this.data.
+  with("similar", "recommendations").
+  key_values().
+  map_each(kv -> kv.value.
+    map_each(p -> {
+      "title_id": this.data.id,
+      "title_kind": @tmdb_kind,
+      "kind": kv.key,
+      "related_id": p.id,
+      "related_kind": @tmdb_kind,
+      "version_ts": this.meta.ts,
+    })
+  ).
+  flatten()

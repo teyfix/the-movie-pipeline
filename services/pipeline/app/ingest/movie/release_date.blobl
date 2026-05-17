@@ -1,0 +1,16 @@
+root = this.data.release_dates.
+  map_each(p -> p.
+    with(
+      "certification",
+      "descriptors",
+      "iso_3166_1",
+      "iso_639_1",
+      "note",
+      "release_date",
+      "type",
+    ).
+    assign({
+      "title_id": this.data.id,
+      "version_ts": this.meta.ts,
+    })
+  )

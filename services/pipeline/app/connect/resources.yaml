@@ -1,0 +1,29 @@
+rate_limit_resources:
+  - label: tmdb
+    local:
+      count: 40
+      interval: 1s
+  - label: tei
+    local:
+      count: 10
+      interval: 1s
+
+processor_resources:
+  - label: error_mapping
+    mapping: |
+      meta output_topic = meta("output_topic").or("tmdb-unknown") + "-dlq"
+
+      root = {
+        "payload": this,
+        "error": {
+          "name": error_source_name(),
+          "path": error_source_path(),
+          "label": error_source_label(),
+          "message": error(),
+        },
+        "meta": {
+          "ts": now(),
+        },
+        "source": root,
+        "connect": @,
+      }

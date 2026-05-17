@@ -1,0 +1,85 @@
+auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+
+common:
+  path_prefix: /loki
+  replication_factor: 1
+  ring:
+    kvstore:
+      store: inmemory
+  storage:
+    filesystem:
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
+
+ingester:
+  chunk_target_size: 1572864 # 1.5MB chunks (default 1MB), better for large lines
+  chunk_encoding: snappy # fast compression, lower memory pressure
+  max_chunk_age: 30m # force flush even if chunk isn't full
+  chunk_idle_period: 10m # don't hold chunks in memory too long
+  chunk_retain_period: 1m
+  flush_check_period: 30s # check frequently
+  concurrent_flushes: 32 # flush more in parallel
+
+schema_config:
+  configs:
+    - from: 2024-01-01
+      store: tsdb
+      object_store: filesystem
+      schema: v13
+      index:
+        prefix: index_
+        period: 24h
+
+storage_config:
+  filesystem:
+    directory: /loki/chunks
+
+limits_config:
+  retention_period: 168h
+  allow_structured_metadata: true
+
+  # Allow large entries (your current offender is ~400KB)
+  max_line_size: 2MB
+  max_line_size_truncate: true # truncate instead of reject — no more 400s
+
+  # Ingestion rate — increase headroom
+  ingestion_rate_mb: 64
+  ingestion_burst_size_mb: 128
+
+  # Stream limits
+  max_global_streams_per_user: 10000
+
+  # Per-stream rate limiting to prevent one noisy service from OOMing loki
+  per_stream_rate_limit: 32MB
+  per_stream_rate_limit_burst: 64MB
+
+  # Label limits
+  max_label_name_length: 1024
+  max_label_value_length: 2048
+
+  # Query limits
+  max_query_series: 5000
+  max_entries_limit_per_query: 10000 # cap rows returned per query
+  max_query_length: 721h # just over retention
+
+compactor:
+  working_directory: /loki/compactor
+  retention_enabled: true
+  delete_request_store: filesystem
+  compaction_interval: 10m
+  max_compaction_parallelism: 2 # don't let compactor spike CPU/mem
+
+query_range:
+  parallelise_shardable_queries: true
+  results_cache:
+    cache:
+      embedded_cache:
+        enabled: true
+        max_size_mb: 256 # bump from 128
+
+analytics:
+  reporting_enabled: false

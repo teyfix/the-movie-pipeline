@@ -1,0 +1,2 @@
+root = this.data.production_countries.
+  map_each(pc -> pc.with("iso_3166_1", "name"))

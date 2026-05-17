@@ -1,0 +1,20 @@
+services:
+  sample:
+    build:
+      context: ${PWD}/services/sample
+    restart: no
+    entrypoint: bash
+    command: /app/entrypoint.sh
+    volumes:
+      - ${PWD}/.volumes/sample:/sample
+      - ${PWD}/services/sample/app:/app:ro
+    environment:
+      NUM_SAMPLE: ${NUM_SAMPLE:-100}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+    networks:
+      net-kafka:
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    profiles:
+      - sample

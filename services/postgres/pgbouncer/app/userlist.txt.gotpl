@@ -1,0 +1,2 @@
+"{{ getenv "DB_USER" }}" "{{ getenv "DB_PASSWORD" }}"
+"{{ getenv "PGBOUNCER_USER" }}" "{{ getenv "PGBOUNCER_PASS" }}"

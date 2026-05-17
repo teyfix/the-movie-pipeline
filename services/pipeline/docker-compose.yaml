@@ -1,0 +1,229 @@
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 15
+  start_period: 3s
+  start_interval: 1s
+
+x-pipeline: &pipeline
+  build:
+    context: ${PWD}/services/pipeline
+    args:
+      ALPINE_IMAGE: ${ALPINE_IMAGE:?}
+      GOMPLATE_IMAGE: ${GOMPLATE_IMAGE:?}
+      RD_CONNECT_IMAGE: ${RD_CONNECT_IMAGE:?}
+      REDPANDA_IMAGE: ${REDPANDA_IMAGE:?}
+      VECTOR_IMAGE: ${VECTOR_IMAGE:?}
+  entrypoint: /bin/bash
+  command: /entrypoint.sh
+  user: root
+  tmpfs:
+    - /tmp/pipeline
+    - /home/pipeline
+
+x-connect-env: &connect-env
+  EXEC_CMD: redpanda-connect streams -o config/observability.yaml -r config/resources.yaml -w pipelines/**/*.yaml
+  KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+
+volumes:
+  seed_tmdb:
+  seed_vector:
+
+networks:
+  net-pipeline:
+
+services:
+  kafka-init:
+    <<: *pipeline
+    restart: on-failure
+    environment:
+      EXEC_CMD: /app/entrypoint.sh
+      KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+      KAFKA_CLEANUP_POLICY: ${KAFKA_CLEANUP_POLICY:?}
+      KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:?}
+      KAFKA_MAX_MESSAGE_BYTES: ${KAFKA_MAX_MESSAGE_BYTES:?}
+      KAFKA_NUM_PARTITIONS: ${KAFKA_NUM_PARTITIONS:?}
+    volumes:
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/kafka:/app:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+    networks:
+      net-kafka:
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 64M
+    depends_on:
+      redpanda: { condition: service_healthy }
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+
+  seed:
+    <<: *pipeline
+    restart: unless-stopped
+    environment:
+      EXEC_CMD: vector -w -c "config/*.yaml" -c "pipelines/**/*.yaml"
+      KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+      VECTOR_DATA_DIR: /data/vector
+      TMDB_FILES_API_URL: http://tmdb.lokal:9090
+      TMDB_DOWNLOAD_DIR: /data/tmdb
+      TMDB_DOWNLOAD_INTERVAL_SECS: 3600
+    volumes:
+      - seed_vector:/data/vector
+      - seed_tmdb:/data/tmdb
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/seed:/app:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+    networks:
+      net-kafka:
+      net-pipeline: { aliases: [seed.lokal] }
+      net-tmdb:
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      redpanda: { condition: service_healthy }
+      tmdb: { condition: service_healthy }
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1G
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:8686/health]
+
+  enrich:
+    <<: *pipeline
+    restart: unless-stopped
+    environment:
+      <<: *connect-env
+      TMDB_API_URL: http://tmdb.lokal:8080
+      TMDB_API_SECRET: ${TMDB_API_SECRET:?}
+    volumes:
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+      - ${PWD}/services/pipeline/app/connect:/app/config:ro
+      - ${PWD}/services/pipeline/app/enrich:/app/pipelines:ro
+    networks:
+      net-kafka:
+      net-pipeline: { aliases: [enrich.lokal] }
+      net-tmdb:
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      redpanda: { condition: service_healthy }
+      tmdb: { condition: service_healthy }
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+
+  normalize:
+    <<: *pipeline
+    restart: unless-stopped
+    environment:
+      <<: *connect-env
+    volumes:
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+      - ${PWD}/services/pipeline/app/connect:/app/config:ro
+      - ${PWD}/services/pipeline/app/normalize:/app/pipelines:ro
+    networks:
+      net-kafka:
+      net-pipeline: { aliases: [normalize.lokal] }
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      redpanda: { condition: service_healthy }
+    deploy:
+      resources:
+        limits:
+          cpus: "${NORMALIZE_RESOURCE_CPU:?}"
+          memory: ${NORMALIZE_RESOURCE_MEM:?}
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+
+  embed:
+    <<: *pipeline
+    restart: unless-stopped
+    environment:
+      <<: *connect-env
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:?}
+    volumes:
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+      - ${PWD}/services/pipeline/app/connect:/app/config:ro
+      - ${PWD}/services/pipeline/app/embed:/app/pipelines:ro
+    networks:
+      net-kafka:
+      net-pipeline: { aliases: [embed.lokal] }
+      net-tei:
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      tei: { condition: service_healthy }
+      redpanda: { condition: service_healthy }
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+    profiles:
+      - embed
+
+  ingest:
+    <<: *pipeline
+    restart: unless-stopped
+    environment:
+      <<: *connect-env
+      PG_SCHEMA: ${PG_SCHEMA:?}
+      POSTGRES_URL: ${POSTGRES_URL:?}
+      INGEST_MAX_IN_FLIGHT: ${INGEST_MAX_IN_FLIGHT:?}
+      INGEST_CONN_MAX_OPEN: ${INGEST_CONN_MAX_OPEN:?}
+      INGEST_CONN_MAX_IDLE: ${INGEST_CONN_MAX_IDLE:?}
+      INGEST_CONN_MAX_LIFE_TIME: ${INGEST_CONN_MAX_LIFE_TIME:?}
+      EMBEDDING_DIMENSIONS_MAX: ${EMBEDDING_DIMENSIONS_MAX:?}
+    volumes:
+      - ${PWD}/services/pipeline/values:/values:ro
+      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+      - ${PWD}/services/pipeline/app/connect:/app/config:ro
+      - ${PWD}/services/pipeline/app/ingest:/app/pipelines:ro
+    networks:
+      net-kafka:
+      net-pgbouncer:
+      net-pipeline: { aliases: [ingest.lokal] }
+    depends_on:
+      kafka-init: { condition: service_completed_successfully }
+      migrate: { condition: service_completed_successfully }
+      pgbouncer: { condition: service_healthy }
+      redpanda: { condition: service_healthy }
+    deploy:
+      resources:
+        limits:
+          cpus: "${INGEST_RESOURCE_CPU:?}"
+          memory: ${INGEST_RESOURCE_MEM:?}
+    labels:
+      # Enable collecting logs
+      - "tmdb.log.enable=true"
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]

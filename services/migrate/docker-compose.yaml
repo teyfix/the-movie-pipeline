@@ -1,0 +1,21 @@
+services:
+  migrate:
+    build:
+      context: ${PWD}/services/migrate
+      dockerfile: Dockerfile
+      args:
+        BUN_IMAGE: ${BUN_IMAGE:?}
+    command: [bun migrate]
+    environment:
+      POSTGRES_URL: ${POSTGRES_ADMIN_URL:?}
+      POSTGRES_SCHEMA: ${PG_SCHEMA:?}
+      MIGRATION_PATH: /app/drizzle
+      EMBEDDING_DIMENSIONS_MAX: ${EMBEDDING_DIMENSIONS_MAX:?}
+    networks:
+      net-postgres:
+    volumes:
+      - ${PWD}/services/migrate/app/src:/app/src:ro
+      - ${PWD}/services/migrate/app/drizzle:/app/drizzle:rw
+    depends_on:
+      postgres:
+        condition: service_healthy

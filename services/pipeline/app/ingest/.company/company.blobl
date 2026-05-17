@@ -1,0 +1,5 @@
+root = this.data.assign({
+  "kind": @tmdb_kind,
+  "parent_company": this.data.parent_company.id,
+  "version_ts": this.meta.ts,
+})

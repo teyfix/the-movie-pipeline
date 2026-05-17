@@ -1,0 +1,56 @@
+data_dir: /var/lib/vector/
+
+api:
+  enabled: true
+  address: 0.0.0.0:8686
+
+healthchecks:
+  enabled: true
+
+sources:
+  vector_metrics:
+    type: internal_metrics
+    namespace: vector
+
+sinks:
+  prometheus_exporter:
+    type: prometheus_exporter
+    inputs:
+      - nginx_metrics*
+      - storage_metrics
+      - vector_metrics
+    address: 0.0.0.0:9598
+
+  loki:
+    type: loki
+    inputs:
+      - enrich_docker
+      - enrich_nginx
+      - enrich_postgres
+    endpoint: http://loki.lokal:3100
+    encoding:
+      codec: json
+    labels:
+      service: "{{ meta.service }}"
+      source: "{{ vector.source_type }}"
+
+    # Buffer to disk — absorbs spikes without dropping
+    buffer:
+      type: disk
+      max_size: 1073741824 # 1GB on disk before backpressure
+      when_full: block # block instead of drop events
+
+    # Smooth out bursts before hitting Loki
+    batch:
+      max_bytes: 4194304 # 4MB per push
+      max_events: 10000 # or 10k events, whichever comes first
+      timeout_secs: 5 # flush at least every 5s even if not full
+
+    # Concurrency + retry control
+    request:
+      concurrency: 8 # parallel requests to Loki
+      rate_limit_num: 50 # max 50 requests/sec
+      rate_limit_duration_secs: 1
+      retry_attempts: 5
+      retry_initial_backoff_secs: 1
+      retry_max_duration_secs: 30

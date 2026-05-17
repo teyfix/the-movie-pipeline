@@ -1,0 +1,45 @@
+{{ $storage := datasource "storage" }}
+
+sources:
+{{- range $res := $storage.resources }}
+  du_exec_{{ $res.name }}:
+    type: exec
+    mode: scheduled
+    scheduled:
+      exec_interval_secs: 60
+    command: [sh, /tmp/config/storage.sh]
+    environment:
+      STORAGE_NAME: "{{ $res.name }}"
+      STORAGE_PATH: "{{ $res.path }}"
+{{- end }}
+
+transforms:
+  du_parse_all:
+    type: remap
+    inputs: [du_exec_*]
+    source: |
+      parsed, err = parse_json(string!(.message))
+
+      if err != null {
+        log("Failed to parse storage JSON: " + err, level: "error")
+        abort
+      }
+
+      .storage_name   = string!(parsed.name)
+      .storage_path   = string!(parsed.path)
+      .storage_bytes  = to_int!(parsed.total_bytes)
+      .storage_status = string!(parsed.status)
+
+      del(.message)
+
+  storage_metrics:
+    type: log_to_metric
+    inputs: [du_parse_all]
+    metrics:
+      - type: gauge
+        name: storage_bytes_total
+        field: storage_bytes
+        tags:
+          name: "{{ `{{ .storage_name }}`}}"
+          path: "{{ `{{ .storage_path }}`}}"
+          status: "{{ `{{ .storage_status }}`}}"

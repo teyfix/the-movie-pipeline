@@ -1,0 +1,36 @@
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 15
+  start_period: 3s
+  start_interval: 1s
+
+volumes:
+  nginx_log:
+
+networks:
+  net-nginx:
+
+services:
+  nginx:
+    image: ${NGINX_IMAGE:?}
+    restart: unless-stopped
+    ports:
+      - ${NGINX_PORT:?}:8000
+    volumes:
+      - nginx_log:/var/log/nginx
+      - ${PWD}/services/nginx/config/default.conf:/etc/nginx/templates/default.conf.template
+    networks:
+      net-grafana:
+      net-kafka:
+      net-loki:
+      net-nginx: { aliases: [nginx.lokal] }
+      net-pgadmin:
+      net-pipeline:
+      net-prometheus:
+      net-tei:
+      net-tmdb:
+      net-vector:
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, wget, -q, --spider, http://0.0.0.0:4000/health]

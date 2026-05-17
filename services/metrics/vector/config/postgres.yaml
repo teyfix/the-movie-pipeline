@@ -1,0 +1,22 @@
+sources:
+  postgres_file:
+    type: file
+    include:
+      - /mnt/log/postgres/*.json
+
+transforms:
+  enrich_postgres:
+    type: remap
+    inputs:
+      - postgres_file
+    source: |
+      json, err = parse_json(.message)
+      log = if err == null { json } else { .message }
+      del(.message)
+      . = {
+        "log": log,
+        "meta": {
+          "service": "postgres"
+        },
+        "vector": .
+      }

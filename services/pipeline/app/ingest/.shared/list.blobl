@@ -1,0 +1,6 @@
+root = this.data.lists.
+  map_each(l -> l.
+    assign({
+      "list_type": l.list_type.or(@tmdb_kind),
+    })
+  )

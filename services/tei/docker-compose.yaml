@@ -1,0 +1,84 @@
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 15
+  start_period: 3s
+  start_interval: 1s
+
+networks:
+  net-tei:
+
+volumes:
+  tei_log:
+  tei_data:
+  tei_cache:
+
+services:
+  tei-server:
+    image: ${HF_TEI_IMAGE:?}
+    command: ["--model-id", "$EMBEDDING_MODEL"]
+    restart: unless-stopped
+    environment:
+      PORT: 8080
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
+    volumes:
+      - tei_data:/data
+    expose:
+      - 8080
+    networks:
+      net-tei: { aliases: [tei-server.lokal] }
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+        limits:
+          cpus: "0.5"
+          memory: 2G
+    healthcheck:
+      <<: *healthcheck
+      # Make room for downloading the model (10m)
+      retries: 100
+      start_interval: 6s
+      test: [CMD, curl, -fsSL, http://0.0.0.0:8080/health]
+
+  tei:
+    image: ${NGINX_IMAGE:?}
+    restart: unless-stopped
+    volumes:
+      - tei_log:/var/log/nginx
+      - tei_cache:/var/cache/tei
+      - ${PWD}/services/tei/nginx/default.conf:/etc/nginx/templates/default.conf.template
+    environment:
+      # Included in cache key to ensure cache is invalidated when model changes
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
+    expose:
+      - 8080
+    networks:
+      net-tei: { aliases: [tei.lokal] }
+      traefik:
+    labels:
+      - "traefik.enable=true"
+
+      # Create the HTTP service for TEI server
+      - "traefik.http.services.${TRAEFIK_SERVICE_PREFIX:?}_tei.loadBalancer.server.port=8080"
+
+      # Create a router to expose TEI service
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tei.rule=Host(`tei.${TRAEFIK_BASE_DOMAIN:?}`)"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tei.tls=true"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tei.tls.certResolver=${TRAEFIK_ACME_RESOLVER:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tei.entryPoints=${TRAEFIK_HTTPS_ENTRYPOINT:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tei.service=${TRAEFIK_SERVICE_PREFIX:?}_tei"
+    depends_on:
+      tei-server:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, curl, -fsSL, http://0.0.0.0:4000/health]

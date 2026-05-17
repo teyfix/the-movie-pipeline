@@ -1,0 +1,65 @@
+{{- $appUser := getenv "PG_USER" }}
+{{- $appSecret := getenv "PG_PASSWORD" }}
+{{- $appSchema := getenv "PG_SCHEMA" }}
+{{- $schemas := coll.Slice $appSchema "drizzle" }}
+{{- $creatorRoles := coll.Slice (getenv "POSTGRES_USER") $appUser }}
+-- ===============================
+-- 1️⃣ Create Schemas
+-- ===============================
+{{- range $schema := $schemas }}
+CREATE SCHEMA IF NOT EXISTS "{{ $schema }}";
+{{- end }}
+-- ===============================
+-- 2️⃣ Create Roles
+-- ===============================
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = '{{ $appUser }}') THEN
+        CREATE ROLE "{{ $appUser }}" WITH LOGIN PASSWORD '{{ $appSecret }}';
+    END IF;
+END $$;
+
+-- ===============================
+-- 3️⃣ Grant Schema Privileges
+-- ===============================
+{{- range $schema := $schemas }}
+GRANT ALL ON SCHEMA "{{ $schema }}" TO "{{ $appUser }}";
+{{- end }}
+
+-- ===============================
+-- 4️⃣ Set search_path for `{{ $appUser }}` role
+-- ===============================
+ALTER ROLE "{{ $appUser }}"
+SET search_path =
+  {{- range $k, $v := $schemas }}
+  {{- if gt $k 0 }},{{- end }}
+  "{{ $v }}"
+  {{- end -}}
+;
+
+-- ===============================
+-- 5️⃣ Default privileges inside each schema
+--    Covers objects created by ANY of the $creatorRoles
+-- ===============================
+{{- range $schema := $schemas }}
+{{- range $creatorRole := $creatorRoles }}
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "{{ $creatorRole }}" IN SCHEMA "{{ $schema }}"
+GRANT ALL ON TABLES TO "{{ $appUser }}";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "{{ $creatorRole }}" IN SCHEMA "{{ $schema }}"
+GRANT ALL ON SEQUENCES TO "{{ $appUser }}";
+
+ALTER DEFAULT PRIVILEGES FOR ROLE "{{ $creatorRole }}" IN SCHEMA "{{ $schema }}"
+GRANT ALL ON FUNCTIONS TO "{{ $appUser }}";
+{{- end }}
+{{- end }}
+
+-- ===============================
+-- 6️⃣ Grant privileges on already-existing objects
+-- ===============================
+{{- range $schema := $schemas }}
+GRANT ALL ON ALL TABLES IN SCHEMA "{{ $schema }}" TO "{{ $appUser }}";
+GRANT ALL ON ALL SEQUENCES IN SCHEMA "{{ $schema }}" TO "{{ $appUser }}";
+GRANT ALL ON ALL FUNCTIONS IN SCHEMA "{{ $schema }}" TO "{{ $appUser }}";
+{{- end }}

@@ -1,0 +1,12 @@
+root = this.data.with("genres", "keywords").
+  key_values().
+  map_each(kv -> kv.value.
+    map_each(f -> {
+      "title_id": this.data.id,
+      "title_kind": @tmdb_kind,
+      "facet_id": f.id,
+      "facet_kind": kv.key,
+      "version_ts": this.meta.ts,
+    })
+  ).
+  flatten()

@@ -1,0 +1,133 @@
+config:
+  group: extras
+
+streams:
+  season:
+    mapping:
+      unarchive: false
+    output:
+      table: title_season
+      primary: [id]
+      columns:
+        - _id
+        - name
+        - overview
+        - air_date
+        - season_number
+        - poster_path
+        - vote_average
+        - title_id
+        - version_ts
+
+  credit:
+    mapping:
+      from: pipelines/.title/credit.blobl
+    output:
+      table: title_credit
+      primary: [credit_id]
+      columns:
+        - person_id
+        - kind
+        - guest
+        - title_id
+        - title_kind
+        - version_ts
+
+  credit_cast:
+    mapping:
+      from: pipelines/.title/credit_cast.blobl
+    output:
+      table: title_credit_cast
+      primary: [credit_id]
+      columns: [cast_id, order, character, version_ts]
+
+  credit_crew:
+    mapping:
+      from: pipelines/.title/credit_crew.blobl
+    output:
+      table: title_credit_crew
+      primary: [credit_id]
+      columns: [job, department, version_ts]
+
+  company:
+    mapping:
+      from: pipelines/.title/company.blobl
+    output:
+      table: title_company
+      primary: [title_id, title_kind, company_id, company_kind]
+      columns: [version_ts]
+
+  translation:
+    mapping:
+      from: pipelines/.title/translation.blobl
+    output:
+      table: title_translation
+      primary: [title_id, title_kind, iso_3166_1, iso_639_1, field]
+      columns: [value, version_ts]
+
+  video:
+    mapping:
+      from: pipelines/.title/video.blobl
+    output:
+      table: title_video
+      primary: [id]
+      columns:
+        - key
+        - name
+        - iso_3166_1
+        - iso_639_1
+        - official
+        - published_at
+        - site
+        - size
+        - type
+        - title_id
+        - title_kind
+        - version_ts
+
+  episode:
+    output:
+      table: title_episode
+      primary: [id]
+      columns:
+        - season_number
+        - episode_number
+        - name
+        - episode_type
+        - air_date
+        - overview
+        - production_code
+        - still_path
+        - runtime
+        - vote_average
+        - vote_count
+        - title_id
+        - version_ts
+
+  episode_credit:
+    mapping:
+      drop_error: true
+    output:
+      table: title_credit
+      primary: [credit_id]
+      columns:
+        - person_id
+        - kind
+        - guest
+        - title_id
+        - title_kind
+        - version_ts
+
+  episode_credit_cast:
+    mapping:
+      drop_error: true
+    output:
+      table: title_credit_cast
+      primary: [credit_id]
+      columns: [cast_id, order, character, version_ts]
+
+  episode_credit_crew:
+    output:
+      table: title_credit_crew
+      primary: [credit_id]
+      columns: [job, department, version_ts]

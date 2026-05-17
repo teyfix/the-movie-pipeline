@@ -1,0 +1,6 @@
+datasources:
+  nginx:
+    url: file:///app/values/nginx.yaml
+  
+  storage:
+    url: file:///app/values/storage.yaml

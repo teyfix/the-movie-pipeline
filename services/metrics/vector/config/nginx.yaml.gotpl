@@ -1,0 +1,151 @@
+{{- $nginx := (datasource "nginx") -}}
+
+sources:
+{{- range $nginx.resources }}
+  nginx_access_{{ .name }}:
+    type: file
+    include: [{{ .access_file }}]
+{{- end }}
+
+transforms:
+{{- range $nginx.resources }}
+  # see: services/tei/README.md for example logs
+  nginx_mark_{{ .name }}:
+    type: remap
+    inputs: [nginx_access_{{ .name }}]
+    source: |
+      json = parse_json!(.message)
+      del(.message)
+      . = {
+        "json": json,
+        "meta": {
+          "kind": "access",
+          "source": "{{ .name }}",
+          "vector": .
+        }
+      }
+{{- end }}
+
+
+  # ---------------------------------------------------------------------------
+  # nginx_duplicate_access: Expand multi-attempt upstream logs
+  # ---------------------------------------------------------------------------
+  # When nginx retries a request internally (e.g., due to upstream failures or
+  # load-balancing retries), the upstream timing fields `urt`, `uct`, and `uht`
+  # contain comma-separated values — one per attempt. Each attempt represents
+  # a distinct request that must be emitted as its own log event; otherwise
+  # metrics would under-count requests or mix timings from different attempts.
+  #
+  # Example raw log:
+  #   {
+  #     "urt": "5000, 5000, 458",   # upstream response time per attempt (ms)
+  #     "uct": "-, -, 293",         # upstream connect time per attempt (ms)
+  #     "uht": "-, -, 328"          # upstream header time per attempt (ms)
+  #   }
+  #
+  # Meaning:
+  #   • Attempt 1: upstream timed out after 5000 ms (no connect/header breakdown)
+  #   • Attempt 2: upstream timed out after 5000 ms (no connect/header breakdown)
+  #   • Attempt 3: success — 293 ms to connect, 328 ms to first header, 458 ms total
+  #
+  # This transform splits the comma-separated values and emits N separate events,
+  # where N = number of values in `urt`. We assume all three timing fields have
+  # identical cardinality; if they don't, the behavior is undefined.
+  # ---------------------------------------------------------------------------
+  nginx_duplicate_access:
+    type: remap
+    inputs:
+      {{- range $nginx.resources }}
+        - nginx_mark_{{ .name }}
+      {{- end }}
+    source: |
+      . = map_values(split(string!(.json.urt), ", ")) -> |_| {
+        item = merge!(.json, .meta)
+
+        for_each(["urt", "uct", "uht"]) -> |_, prop| {
+          for_each(split(string!(get!(.json, [prop])), ", ")) -> |idx, value| {
+            item = merge(item, object_from_array([[prop, value]]))
+          }
+        }
+
+        item
+      }
+
+  # ---------------------------------------------------------------------------
+  # nginx_parse_access: Normalize string values to typed values
+  # ---------------------------------------------------------------------------
+  # Coerces numeric strings to floats (e.g., "5000" → 5000.0) and converts
+  # nginx's "-" placeholder to null so downstream metrics and sinks receive
+  # properly typed data.
+  # ---------------------------------------------------------------------------
+  nginx_parse_access:
+    type: remap
+    inputs: [nginx_duplicate_access]
+    source: |
+      . = map_values(.) -> |value| {
+        if value == null || value == "" || value == "-" { null }  else {
+          float_val, err = parse_float(value)
+          if err == null { float_val } else { value }
+        }
+      }
+  
+  enrich_nginx:
+    type: remap
+    inputs: [nginx_parse_access]
+    source: |
+      log = .
+      log.level = if log.cache == "HIT" { "INFO" } else { "WARN" }
+
+      del(log.kind)
+      del(log.source)
+      del(log.vector)
+
+      . = {
+        "log": log,
+        "meta": {
+          "kind": .kind,
+          "service": .source
+        },
+        "vector": .vector
+      }
+
+  nginx_metrics:
+    type: log_to_metric
+    inputs: [nginx_parse_access]
+    metrics:
+      - type: counter
+        name: nginx_requests_total
+        field: rt
+        tags:
+{{- range $k, $v := $nginx.metrics.tags }}
+          {{ $k }}: "{{ printf "{{ %s }}" $v }}"
+{{- end }}
+
+      - type: histogram
+        name: nginx_request_duration_seconds
+        field: rt
+        tags:
+{{- range $k, $v := $nginx.metrics.tags }}
+          {{ $k }}: "{{ printf "{{ %s }}" $v }}"
+{{- end }}
+
+{{- range $nginx.metrics.variants }}
+  nginx_filter_{{ .field }}:
+    type: filter
+    inputs: [nginx_parse_access]
+    condition:
+      type: vrl
+      source: .{{ .field }} != null
+
+  nginx_metrics_{{ .field }}:
+    type: log_to_metric
+    inputs: [nginx_filter_{{ .field }}]
+    metrics:
+      - type: histogram
+        name: nginx_upstream_{{ .name }}_seconds
+        field: {{ .field }}
+        tags:
+{{- range $k, $v := $nginx.metrics.tags }}
+          {{ $k }}: "{{ printf "{{ %s }}" $v }}"
+{{- end }}
+{{- end }}

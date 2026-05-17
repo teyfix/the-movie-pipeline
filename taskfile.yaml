@@ -1,0 +1,213 @@
+# Taskfile for TMDB Kafka pipeline
+# Run `task --list` to see all available tasks
+# Environment variables can be set in `.env` (see `dotenv` below)
+version: 3
+
+dotenv: [.env]
+
+tasks:
+  # ----------------------------------------------------------------------
+  # kcat - Kafka consumer with SSL and tuned fetch parameters
+  # ----------------------------------------------------------------------
+  # Usage:
+  #   task kcat -- <topic>
+  #
+  # The topic name is required and must come after `--`.
+  # Example: task kcat -- tmdb-detail-movie
+  #
+  # Variables:
+  #   count: Stop after N messages (default: 10; 0 = unlimited)
+  #   kafka_url: Broker URL (default: kafka.tmdb.127-0-0-1.sslip.io:4040)
+  #
+  # Command uses:
+  #   - SSL security protocol
+  #   - Large fetch limits (10 MB per message, 50 MB total)
+  #   - Minimal fetch wait (100 ms) for low latency
+  # ----------------------------------------------------------------------
+  kcat:
+    desc: Consume messages from Kafka topic (from beginning)
+    vars:
+      kafka_url: "{{.kafka_url | default `kafka.tmdb.127-0-0-1.sslip.io:4040`}}"
+      count: "{{.count | default 10}}"
+    cmds:
+      - >-
+        kcat
+        -b "{{.kafka_url}}"
+        -t "{{.CLI_ARGS}}"
+        -o beginning
+        -C -e -q
+        -X security.protocol=ssl
+        -X fetch.message.max.bytes=10485760
+        -X fetch.max.bytes=52428800
+        -X fetch.min.bytes=1048576
+        -X fetch.wait.max.ms=100
+        {{if .count}}-c {{.count}}{{end}}
+
+  # ----------------------------------------------------------------------
+  # logs - Stream or tail Docker compose logs without extra prefix
+  # ----------------------------------------------------------------------
+  # Usage:
+  #   task logs -- <container>
+  #
+  # Examples:
+  #   task logs tail=10 -- connect
+  #   task logs follow=true -- redpanda
+  #
+  # Variables:
+  #   follow: Set to "true" to follow log output (default: false)
+  #   tail: Number of recent lines to show (default: 10; 0 = unlimited)
+  # ----------------------------------------------------------------------
+  logs:
+    desc: Show logs from a container
+    vars:
+      tail: "{{.tail | default 10}}"
+      follow: "{{.follow | default false}}"
+    cmds:
+      - >-
+        docker compose logs --no-log-prefix
+        {{if eq .follow "true"}}--follow{{end}}
+        {{if gt (.tail | atoi) 0}}--tail={{.tail}}{{end}}
+        {{.CLI_ARGS}}
+
+  # ----------------------------------------------------------------------
+  # sample - Generate JSON sample files for all normalized TMDB resources
+  # ----------------------------------------------------------------------
+  # Runs scripts/generate-samples.sh which produces *.json samples and
+  # corresponding TypeScript definitions (.d.ts) in the .samples/ directory.
+  # ----------------------------------------------------------------------
+  sample:
+    desc: Generate sample JSON files for all normalized TMDB resources
+    vars:
+      count: "{{.count | default 10}}"
+    cmds:
+      - docker compose run --rm -it -eNUM_SAMPLE={{.count}} sample
+
+  # ----------------------------------------------------------------------
+  # rpk - Run rpk (Redpanda CLI) commands against the local broker
+  # ----------------------------------------------------------------------
+  # Usage:
+  #   task rpk -- <rpk-args>
+  #
+  # Examples:
+  #   task rpk -- topic list
+  #   task rpk -- group list
+  #   task rpk -- cluster info
+  #
+  # Command runs rpk inside the redpanda container, connecting to
+  # kafka.lokal:9092 (the internal broker address).
+  # ----------------------------------------------------------------------
+
+  rpk:
+    desc: Run rpk command
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide a command to run. Usage: task rpk -- <args>"
+    cmds:
+      - docker compose exec redpanda rpk {{.CLI_ARGS}} --brokers kafka.lokal:9092
+
+  rpk:topic:delete:
+    aliases: [rm:topic]
+    desc: Remove a Kafka consumer topic
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide a filter to remove topics. Usage: task rm:topic -- <args>"
+      - sh: 'task ls:topic | grep -q "{{.CLI_ARGS}}"'
+        msg: "Error: Could not find any topics matching filter '{{.CLI_ARGS}}'"
+    cmds:
+      - docker compose exec redpanda sh -c 'rpk topic list | tail -n+2 | awk '"'"'{print $1}'"'"' | grep "{{.CLI_ARGS}}" | xargs rpk topic delete --brokers kafka.lokal:9092'
+
+  rpk:topic:list:
+    aliases: [ls:topic]
+    desc: Remove a Kafka consumer topic
+    cmds:
+      - docker compose exec redpanda sh -c 'rpk topic list | tail -n+2 | awk '"'"'{print $1}'"'"''
+
+  rpk:group:delete:
+    aliases: [rm:group]
+    desc: Remove a Kafka consumer group
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide a filter to remove groups. Usage: task rm:group -- <args>"
+      - sh: 'task ls:group | grep -q "{{.CLI_ARGS}}"'
+        msg: "Error: Could not find any groups matching filter '{{.CLI_ARGS}}'"
+    cmds:
+      - docker compose exec redpanda sh -c 'rpk group list | tail -n+2 | awk '"'"'{print $2}'"'"' | grep "{{.CLI_ARGS}}" | xargs rpk group delete --brokers kafka.lokal:9092'
+
+  rpk:group:list:
+    aliases: [ls:group]
+    desc: Remove a Kafka consumer group
+    cmds:
+      - docker compose exec redpanda sh -c 'rpk group list | tail -n+2 | awk '"'"'{print $2}'"'"''
+
+  rpk:pipeline:delete:
+    aliases: [rm:pipeline]
+    desc: Remove a Kafka consumer pipeline
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide a filter to remove pipelines. Usage: task rm:pipeline -- <args>"
+    deps:
+      - task: rpk:group:delete
+        args: "{{.CLI_ARGS}}"
+      - task: rpk:topic:delete
+        args: "{{.CLI_ARGS}}"
+
+  up:
+    desc: Create and start services
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide services to start. Usage: task up -- <args>"
+    cmds:
+      - docker compose up -d {{.CLI_ARGS}}
+
+  run:
+    desc: Run services
+    vars:
+      build: "{{.build | default false}}"
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide services to run. Usage: task run -- <args>"
+    cmds:
+      - docker compose run {{if eq .build "true"}}--build{{end}} --rm -it {{.CLI_ARGS}}
+
+  down:
+    desc: Stop and remove services
+    vars:
+      build: "{{.build | default false}}"
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide services to remove. Usage: task down -- <args>"
+    cmds:
+      - docker compose run {{if eq .build "true"}}--build{{end}} --rm -it {{.CLI_ARGS}}
+
+  cache:tmdb:
+    desc: Show TMDB API cache usage
+    cmds:
+      - docker compose exec tmdb sh -c 'du -sh /var/cache'
+
+  metrics:
+    desc: Fetch the metrics of a Redpanda Connect service
+    preconditions:
+      - sh: 'test -n "{{.CLI_ARGS}}"'
+        msg: "Error: You must provide a service to fetch metrics for. Usage: task metrics -- <args>"
+    cmds:
+      - docker compose exec {{.CLI_ARGS}} sh -c 'curl -fsSL http://localhost:4195/metrics'
+
+  grafana:reload:
+    desc: Reload Grafana dashboards
+    preconditions:
+      - sh: test -n "{{.GF_SECURITY_ADMIN_PASSWORD}}"
+        msg: "Error: You must set GF_SECURITY_ADMIN_PASSWORD to reload Grafana dashboards."
+      - sh: test -n "$(docker compose ps -aq grafana)"
+        msg: "Error: Grafana is not running."
+    cmds:
+      - docker compose exec grafana curl -s -X POST http://admin:${GF_SECURITY_ADMIN_PASSWORD}@localhost:3000/api/admin/provisioning/dashboards/reload
+
+  migrate:
+    desc: Generate and apply database migrations
+    cmds:
+      - docker compose run --rm -it migrate
+
+  migrate:gen:
+    desc: Generate database migrations
+    cmds:
+      - docker compose run --rm -it migrate "bun generate"

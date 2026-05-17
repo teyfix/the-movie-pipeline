@@ -1,0 +1,18 @@
+root = this.data.translations.
+  map_each(t -> t.
+    assign({ "name": t.title.or(t.name) }).
+    with("name", "overview", "tagline", "homepage", "runtime").
+    key_values().
+    filter(kv -> ![0, null, ""].contains(kv.value)).
+    map_each(kv -> t.
+      with("iso_3166_1", "iso_639_1").
+      assign({
+        "field": kv.key,
+        "value": kv.value.string(),
+        "title_id": this.data.id,
+        "title_kind": @tmdb_kind,
+        "version_ts": this.meta.ts,
+      })
+    )
+  ).
+  flatten()

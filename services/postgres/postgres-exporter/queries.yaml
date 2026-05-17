@@ -1,0 +1,68 @@
+# ! === NOTICE ===
+# Adding queries to this file is deprecated
+# Example queries have been transformed into collectors.
+# ? === Alternative ===
+# https://github.com/burningalchemist/sql_exporter
+pg_custom_database_uptime:
+  query: >-
+    SELECT
+      extract(
+        EPOCH
+        FROM
+          (now() - pg_postmaster_start_time())
+      ) AS seconds
+  metrics:
+    - seconds:
+        usage: "GAUGE"
+        description: "The uptime of the PostgreSQL server in seconds"
+
+pg_custom_title:
+  query: >-
+    SELECT
+      "kind",
+      count(1) AS "count"
+    FROM
+      (
+        SELECT
+          "kind"
+        FROM
+          "tmdb"."title"
+        UNION ALL
+        SELECT
+          'season' AS "kind"
+        FROM
+          "tmdb"."title_season"
+        UNION ALL
+        SELECT
+          'episode' AS "kind"
+        FROM
+          "tmdb"."title_episode"
+      )
+    GROUP BY
+      "kind"
+    ORDER BY
+      "count" DESC
+  metrics:
+    - kind:
+        usage: "LABEL"
+        description: "Title kind (movie, show, person, etc.)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of titles per kind"
+
+pg_custom_person:
+  query: >-
+    SELECT
+      coalesce("known_for_department", 'Unknown') AS "department",
+      count(1) AS "count"
+    FROM
+      "tmdb"."person"
+    GROUP BY
+      "known_for_department"
+  metrics:
+    - department:
+        usage: "LABEL"
+        description: "Known for department (Acting, Directing, etc.)"
+    - count:
+        usage: "GAUGE"
+        description: "Number of people per department"

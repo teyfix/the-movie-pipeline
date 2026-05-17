@@ -1,0 +1,10 @@
+root = this.data.episode_groups.
+  map_each(eg -> eg.
+    with("name", "description", "group_count", "episode_count", "type").
+    assign({
+      "id": "00000000%s".format(eg.id),
+      "title_id": this.data.id,
+      "company_id": eg.network.id,
+      "version_ts": this.meta.ts,
+    })
+  )

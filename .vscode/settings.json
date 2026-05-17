@@ -1,0 +1,35 @@
+{
+  "search.exclude": {
+    ".volumes/sample/*.json": true
+  },
+  "sqltools.connections": [
+    {
+      "name": "PostgreSQL",
+      "connectString": "postgresql://supabase_admin:supersecret@pg.tmdb.127-0-0-1.sslip.io:4040/tmdb",
+      "driver": "PostgreSQL",
+      "group": "Local",
+      "pgOptions": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      },
+      "previewLimit": 50,
+      "server": "pg.tmdb.127-0-0-1.sslip.io",
+      "ssh": "Disabled"
+    },
+    {
+      "name": "PgBouncer",
+      "connectString": "postgresql://tmdb:supersecret@pgbouncer.tmdb.127-0-0-1.sslip.io:4040/tmdb",
+      "driver": "PostgreSQL",
+      "group": "Local",
+      "pgOptions": {
+        "ssl": {
+          "rejectUnauthorized": false
+        }
+      },
+      "previewLimit": 50,
+      "server": "pg.tmdb.127-0-0-1.sslip.io",
+      "ssh": "Disabled"
+    }
+  ]
+}

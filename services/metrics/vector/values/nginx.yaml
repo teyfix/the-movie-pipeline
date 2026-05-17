@@ -1,0 +1,21 @@
+resources:
+  - name: tei
+    access_file: /mnt/log/tei/tei_access.log
+  - name: tmdb
+    access_file: /mnt/log/tmdb/tmdb*_access.log
+
+metrics:
+  variants:
+    - name: connect
+      field: uct
+    - name: header
+      field: uht
+    - name: response
+      field: urt
+
+  tags:
+    source: source
+    proxy_host: proxy_host
+    status: status
+    cache: cache
+    method: method

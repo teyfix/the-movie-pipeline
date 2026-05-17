@@ -1,0 +1,36 @@
+{
+  "database": "postgresql",
+  "dataTypeCase": "upper",
+  "denseOperators": false,
+  "expressionWidth": 50,
+  "formatter": "sql-formatter",
+  "functionCase": "lower",
+  "identifierCase": "preserve",
+  "indentStyle": "standard",
+  "keywordCase": "upper",
+  "language": "postgresql",
+  "linesBetweenQueries": 1,
+  "logicalOperatorNewline": "before",
+  "newlineBeforeSemicolon": false,
+  "plugins": [
+    "prettier-plugin-sql",
+    "prettier-plugin-embed",
+    "prettier-plugin-packagejson"
+  ],
+  "printWidth": 80,
+  "singleQuote": true,
+  "overrides": [
+    {
+      "files": "*.sql",
+      "options": {
+        "parser": "sql"
+      }
+    },
+    {
+      "files": "drizzle/**/snapshot.json",
+      "options": {
+        "printWidth": 1000
+      }
+    }
+  ]
+}

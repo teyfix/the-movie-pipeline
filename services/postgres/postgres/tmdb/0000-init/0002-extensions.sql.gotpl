@@ -1,0 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS "vector" SCHEMA "public";
+
+CREATE EXTENSION IF NOT EXISTS "pgroonga" SCHEMA "{{ getenv `PG_SCHEMA` }}";
+
+CREATE EXTENSION IF NOT EXISTS "pg_jsonschema" SCHEMA "{{ getenv `PG_SCHEMA` }}";

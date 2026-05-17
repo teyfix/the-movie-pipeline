@@ -1,0 +1,21 @@
+root = this.data.images.
+  with("profiles").
+  key_values().
+  map_each(kv -> kv.value.
+    map_each(p -> p.
+      with(
+        "file_path",
+        "aspect_ratio",
+        "width",
+        "height",
+        "vote_average",
+        "vote_count",
+      ).
+      assign({
+        "kind": kv.key,
+        "person_id": this.data.id,
+        "version_ts": this.meta.ts,
+      })
+    )
+  ).
+  flatten()

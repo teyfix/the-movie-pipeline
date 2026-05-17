@@ -1,0 +1,15 @@
+networks:
+  traefik:
+    name: traefik_proxy
+    external: true
+
+include:
+  - ${PWD}/services/metrics/docker-compose.yaml
+  - ${PWD}/services/migrate/docker-compose.yaml
+  - ${PWD}/services/nginx/docker-compose.yaml
+  - ${PWD}/services/pipeline/docker-compose.yaml
+  - ${PWD}/services/postgres/docker-compose.yaml
+  - ${PWD}/services/redpanda/docker-compose.yaml
+  - ${PWD}/services/sample/docker-compose.yaml
+  - ${PWD}/services/tei/docker-compose.yaml
+  - ${PWD}/services/tmdb/docker-compose.yaml

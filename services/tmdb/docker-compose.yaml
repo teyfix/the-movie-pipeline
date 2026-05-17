@@ -1,0 +1,59 @@
+x-healthcheck: &healthcheck
+  interval: 30s
+  timeout: 5s
+  retries: 15
+  start_period: 3s
+  start_interval: 1s
+
+networks:
+  net-tmdb:
+
+volumes:
+  tmdb_log:
+  tmdb_cache:
+
+services:
+  tmdb:
+    image: ${NGINX_IMAGE:?}
+    restart: unless-stopped
+    volumes:
+      - tmdb_log:/var/log/nginx
+      - tmdb_cache:/var/cache
+      - ${PWD}/services/tmdb/nginx/proxy_cache.conf:/etc/nginx/snippets/proxy_cache.conf
+      - ${PWD}/services/tmdb/nginx/default.conf:/etc/nginx/templates/default.conf.template
+    expose:
+      - 8080
+      - 9090
+    networks:
+      net-tmdb: { aliases: [tmdb.lokal] }
+      traefik:
+    labels:
+      - "traefik.enable=true"
+
+      # Create the HTTP service for TMDB API
+      - "traefik.http.services.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.loadBalancer.server.port=8080"
+
+      # Create a router to expose TMDB API service
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.rule=Host(`api.${TRAEFIK_BASE_DOMAIN:?}`)"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.tls=true"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.tls.certResolver=${TRAEFIK_ACME_RESOLVER:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.entryPoints=${TRAEFIK_HTTPS_ENTRYPOINT:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api.service=${TRAEFIK_SERVICE_PREFIX:?}_tmdb_api"
+
+      # Create the HTTP service for TMDB S3
+      - "traefik.http.services.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.loadBalancer.server.port=9090"
+
+      # Create a router to expose TMDB S3 service
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.rule=Host(`files.${TRAEFIK_BASE_DOMAIN:?}`)"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.tls=true"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.tls.certResolver=${TRAEFIK_ACME_RESOLVER:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.entryPoints=${TRAEFIK_HTTPS_ENTRYPOINT:?}"
+      - "traefik.http.routers.${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files.service=${TRAEFIK_SERVICE_PREFIX:?}_tmdb_files"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    healthcheck:
+      <<: *healthcheck
+      test: [CMD, curl, -fsSL, http://0.0.0.0:4000/health]

@@ -1,0 +1,22 @@
+sources:
+  docker_logs:
+    type: docker_logs
+    include_labels:
+      - tmdb.log.enable=true
+
+transforms:
+  enrich_docker:
+    type: remap
+    inputs:
+      - docker_logs
+    source: |
+      json, err = parse_json(.message)
+      log = if err == null { json } else { .message }
+      del(.message)
+      . = {
+        "log": log,
+        "meta": {
+          "service": .container_name
+        },
+        "vector": .
+      }

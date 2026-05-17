@@ -83,22 +83,21 @@ tasks:
       - docker compose run --rm -it -eNUM_SAMPLE={{.count}} sample
 
   # ----------------------------------------------------------------------
-  # rpk - Run rpk (Redpanda CLI) commands against the local broker
+  # rpk - Redpanda CLI Commands
   # ----------------------------------------------------------------------
   # Usage:
   #   task rpk -- <rpk-args>
-  #
-  # Examples:
-  #   task rpk -- topic list
-  #   task rpk -- group list
-  #   task rpk -- cluster info
+  #   task rm:topic -- <topic-filter>
+  #   task ls:topic
+  #   task rm:group -- <group-filter>
+  #   task ls:group
+  #   task rm:pipeline -- <filter>
   #
   # Command runs rpk inside the redpanda container, connecting to
   # kafka.lokal:9092 (the internal broker address).
   # ----------------------------------------------------------------------
-
   rpk:
-    desc: Run rpk command
+    desc: Run arbitrary rpk command
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide a command to run. Usage: task rpk -- <args>"
@@ -107,7 +106,7 @@ tasks:
 
   rpk:topic:delete:
     aliases: [rm:topic]
-    desc: Remove a Kafka consumer topic
+    desc: Remove Kafka consumer topics matching a filter
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide a filter to remove topics. Usage: task rm:topic -- <args>"
@@ -118,13 +117,13 @@ tasks:
 
   rpk:topic:list:
     aliases: [ls:topic]
-    desc: Remove a Kafka consumer topic
+    desc: List all Kafka consumer topics
     cmds:
       - docker compose exec redpanda sh -c 'rpk topic list | tail -n+2 | awk '"'"'{print $1}'"'"''
 
   rpk:group:delete:
     aliases: [rm:group]
-    desc: Remove a Kafka consumer group
+    desc: Remove Kafka consumer groups matching a filter
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide a filter to remove groups. Usage: task rm:group -- <args>"
@@ -135,13 +134,13 @@ tasks:
 
   rpk:group:list:
     aliases: [ls:group]
-    desc: Remove a Kafka consumer group
+    desc: List all Kafka consumer groups
     cmds:
       - docker compose exec redpanda sh -c 'rpk group list | tail -n+2 | awk '"'"'{print $2}'"'"''
 
   rpk:pipeline:delete:
     aliases: [rm:pipeline]
-    desc: Remove a Kafka consumer pipeline
+    desc: Remove a Kafka consumer pipeline (topics and groups) matching a filter
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide a filter to remove pipelines. Usage: task rm:pipeline -- <args>"
@@ -151,8 +150,16 @@ tasks:
       - task: rpk:topic:delete
         args: "{{.CLI_ARGS}}"
 
+  # ----------------------------------------------------------------------
+  # Docker Compose Operations
+  # ----------------------------------------------------------------------
+  # Usage:
+  #   task up -- <service1> <service2>
+  #   task run -- <service>
+  #   task down -- <service>
+  # ----------------------------------------------------------------------
   up:
-    desc: Create and start services
+    desc: Create and start services in the background
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide services to start. Usage: task up -- <args>"
@@ -160,7 +167,7 @@ tasks:
       - docker compose up -d {{.CLI_ARGS}}
 
   run:
-    desc: Run services
+    desc: Run a one-off command on a service
     vars:
       build: "{{.build | default false}}"
     preconditions:
@@ -170,15 +177,18 @@ tasks:
       - docker compose run {{if eq .build "true"}}--build{{end}} --rm -it {{.CLI_ARGS}}
 
   down:
-    desc: Stop and remove services
-    vars:
-      build: "{{.build | default false}}"
+    desc: Stop and remove targeted services, containers, and networks
     preconditions:
       - sh: 'test -n "{{.CLI_ARGS}}"'
         msg: "Error: You must provide services to remove. Usage: task down -- <args>"
     cmds:
-      - docker compose run {{if eq .build "true"}}--build{{end}} --rm -it {{.CLI_ARGS}}
+      - docker compose rm -s -f -v {{.CLI_ARGS}}
 
+  # ----------------------------------------------------------------------
+  # Metrics, Observability & Caching
+  # ----------------------------------------------------------------------
+  # Manage infrastructure insights and cache layers.
+  # ----------------------------------------------------------------------
   cache:tmdb:
     desc: Show TMDB API cache usage
     cmds:
@@ -193,7 +203,7 @@ tasks:
       - docker compose exec {{.CLI_ARGS}} sh -c 'curl -fsSL http://localhost:4195/metrics'
 
   grafana:reload:
-    desc: Reload Grafana dashboards
+    desc: Hot-reload Grafana dashboards from provisioning files
     preconditions:
       - sh: test -n "{{.GF_SECURITY_ADMIN_PASSWORD}}"
         msg: "Error: You must set GF_SECURITY_ADMIN_PASSWORD to reload Grafana dashboards."
@@ -202,12 +212,17 @@ tasks:
     cmds:
       - docker compose exec grafana curl -s -X POST http://admin:${GF_SECURITY_ADMIN_PASSWORD}@localhost:3000/api/admin/provisioning/dashboards/reload
 
+  # ----------------------------------------------------------------------
+  # Database Migrations
+  # ----------------------------------------------------------------------
+  # Manage schema evolution natively through Bun.
+  # ----------------------------------------------------------------------
   migrate:
-    desc: Generate and apply database migrations
+    desc: Apply pending database migrations
     cmds:
       - docker compose run --rm -it migrate
 
   migrate:gen:
-    desc: Generate database migrations
+    desc: Generate a new empty database migration file
     cmds:
       - docker compose run --rm -it migrate "bun generate"

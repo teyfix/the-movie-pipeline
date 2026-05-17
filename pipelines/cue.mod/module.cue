@@ -1,0 +1,4 @@
+module: "pipelines.lokal"
+language: {
+	version: "v0.16.1"
+}

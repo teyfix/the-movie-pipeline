@@ -17,8 +17,8 @@ resources: {
 		}
 		download: prefix: ["movie", "adult_movie"]
 		enrich: {
-			min_popularity: 1
-			endpoint:       "/3/movie/%s?append_to_response=alternative_titles,credits,images,keywords,lists,recommendations,release_dates,reviews,similar,translations,videos,watch_providers"
+			filter: min_popularity: 1
+			api: endpoint:          "/3/movie/{{ data.id }}?append_to_response=alternative_titles,credits,images,keywords,lists,recommendations,release_dates,reviews,similar,translations,videos,watch_providers"
 		}
 		ingest: batch_size: "30mb"
 	}
@@ -37,8 +37,8 @@ resources: {
 		}
 		download: prefix: ["tv_series", "adult_tv_series"]
 		enrich: {
-			min_popularity: 2
-			endpoint:       "/3/tv/%s?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch_providers"
+			filter: min_popularity: 2
+			api: endpoint:          "/3/tv/{{ data.id }}?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch_providers"
 		}
 		ingest: batch_size: "16mb"
 	}
@@ -57,8 +57,7 @@ resources: {
 		}
 		download: prefix: ["person", "adult_person"]
 		enrich: {
-			min_popularity: 0.8
-			endpoint:       "/3/person/%s?append_to_response=images,movie_credits,tagged_images,translations,tv_credits"
+			api: endpoint: "/3/person/{{ data.id }}?append_to_response=images,movie_credits,tagged_images,translations,tv_credits"
 		}
 		ingest: batch_size: "24mb"
 	}
@@ -77,8 +76,7 @@ resources: {
 		}
 		download: prefix: ["collection"]
 		enrich: {
-			min_popularity: 0
-			endpoint:       "/3/collection/%s"
+			api: endpoint: "/3/collection/{{ data.id }}"
 		}
 		ingest: batch_size: "2mb"
 	}
@@ -97,9 +95,10 @@ resources: {
 		}
 		download: prefix: ["tv_network"]
 		enrich: {
-			min_popularity: 0
-			endpoint:       "/3/network/%s"
-			passthrough:    true
+			api: {
+				endpoint:    "/3/network/{{ data.id }}"
+				passthrough: true
+			}
 		}
 		ingest: batch_size: "200kb"
 	}
@@ -118,9 +117,10 @@ resources: {
 		}
 		download: prefix: ["keyword"]
 		enrich: {
-			min_popularity: 0
-			endpoint:       "/3/keyword/%s"
-			passthrough:    true
+			api: {
+				endpoint:    "/3/keyword/{{ data.id }}"
+				passthrough: true
+			}
 		}
 		ingest: batch_size: "100kb"
 	}
@@ -139,27 +139,32 @@ resources: {
 		}
 		download: prefix: ["production_company"]
 		enrich: {
-			min_popularity: 0
-			endpoint:       "/3/company/%s"
-			passthrough:    true
+			api: {
+				endpoint:    "/3/company/{{ data.id }}"
+				passthrough: true
+			}
 		}
 		ingest: batch_size: "200kb"
 	}
-}
-extras: season: {
-	kind: "season"
-	topic: {
-		detail:     "tmdb.detail.season"
-		normalized: "tmdb.normalized.season"
+	season: {
+		kind: "season"
+		topic: {
+			export:     "tmdb.detail.show"
+			detail:     "tmdb.detail.season"
+			normalized: "tmdb.normalized.season"
+		}
+		consumer: {
+			enrich:    "tmdb.enrich.season.v1"
+			normalize: "tmdb.normalize.season.v1"
+			ingest:    "tmdb.ingest.season.v1"
+		}
+		enrich: {
+			api: endpoint: "/3/tv/{{ data.id }}/season/{{ data.season.season_number }}?append_to_response=credits,images,translations,videos,watch_providers"
+			kafka: {
+				batch_size:  "5mb"
+				buffer_size: "10mb"
+			}
+		}
+		ingest: batch_size: "20mb"
 	}
-	consumer: {
-		enrich:    "tmdb.enrich.season.v1"
-		normalize: "tmdb.normalize.season.v1"
-		ingest:    "tmdb.ingest.season.v1"
-	}
-	enrich: {
-		min_popularity: 0
-		endpoint:       "/3/tv/%s/season/%s?append_to_response=credits,images,translations,videos,watch_providers"
-	}
-	ingest: batch_size: "20mb"
 }

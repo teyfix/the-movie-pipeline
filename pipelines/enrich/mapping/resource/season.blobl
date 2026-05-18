@@ -1,0 +1,9 @@
+root = this.data.seasons.or([]).
+  map_each(s -> this.
+    without("data").
+    assign({
+      "data": this.data.
+        with("id", "name", "original_name").
+        assign({ "season": s })
+    })
+  )

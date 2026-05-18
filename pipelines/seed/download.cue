@@ -4,7 +4,7 @@ import "pipelines.lokal/shared/tmdb"
 
 download: {
 	sources: {
-		for name , resource in tmdb.resources {
+		for name, resource in tmdb.resources if resource.download != _|_ {
 			for prefix in resource.download.prefix {
 				"tmdb_download_\(prefix)": {
 					type:               "exec"

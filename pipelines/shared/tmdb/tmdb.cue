@@ -2,48 +2,56 @@ package tmdb
 
 import units "pipelines.lokal/shared/units"
 
-#CommonTopic: {
-	embed?:     string
-	detail:     string
-	normalized: string
-}
-
-#CommonConsumer: {
-	enrich:    string
-	normalize: string
-	embed?:    string
-	ingest:    string
-}
-
-#Enrich: {
-	min_popularity: number | *0
-	endpoint:       string
-	passthrough:    bool | *false
-}
-
-#Ingest: {
-	batch_size: units.#Size
-}
-
 #Resource: {
 	kind: string
-	topic: #CommonTopic & {
-		export: string
+	topic: {
+		embed?:     string
+		detail:     string
+		normalized: string
+		export:     string
 	}
-	consumer: #CommonConsumer
-	download: {
+	consumer: {
+		enrich:    string
+		normalize: string
+		embed?:    string
+		ingest:    string
+	}
+	download?: {
 		prefix: [...string]
 	}
-	enrich: #Enrich
-	ingest: #Ingest
-}
+	enrich: {
+		// Drop messages below this popularity score before enrichment
+		filter: {
+			min_popularity: number | *0
+		}
 
-#Extra: {
-	kind:     string
-	topic:    #CommonTopic
-	consumer: #CommonConsumer
-	enrich:   #Enrich
+		// TMDB API fetch behaviour
+		api: {
+			// Endpoint path to fetch detail data (e.g. "/3/movie/{{ data.id }}?append_to_response=alternative_titles,...")
+			endpoint: string
+			// Skip the API call and pass the source message through as-is
+			passthrough: bool | *false
+		}
+
+		// Bloblang transform applied after fetch
+		transform?: {
+			// true  → load from "mapping/resource/<name>.blobl"
+			// string → load from the given path
+			mapping: true | string
+			// Unarchive the mapping output as a JSON array
+			unarchive: bool | *false
+		}
+
+		// Kafka consumer tuning
+		kafka: {
+			max_wait:    units.#Duration | *"5s"
+			batch_size:  units.#Size | *"100kb"
+			buffer_size: units.#Size | *"200kb"
+		}
+	}
+	ingest: {
+		batch_size: units.#Size
+	}
 }
 
 resources: [Name=string]: #Resource
-extras: [Name=string]:    #Extra

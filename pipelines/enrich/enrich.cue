@@ -1,3 +1,5 @@
+@experiment(try)
+
 package enrich
 
 import "pipelines.lokal/shared/tmdb"
@@ -5,43 +7,62 @@ import "pipelines.lokal/shared/tmdb"
 resources: {
 	input: {
 		broker: {
-			inputs: [for resource in tmdb.resources {
-				label: resource.kind
+			inputs: [for prop, resource in tmdb.resources {
+				label: prop
 				redpanda: {
 					seed_brokers: ["${KAFKA_BROKERS}"]
 					topics: [resource.topic.export]
-					consumer_group:         resource.consumer.enrich
-					start_from_oldest:      true
-					partition_buffer_bytes: "100kb"
-					max_yield_batch_bytes:  "100kb"
+					consumer_group:            resource.consumer.enrich
+					start_from_oldest:         true
+					fetch_max_bytes:           resource.enrich.kafka.batch_size
+					fetch_max_partition_bytes: resource.enrich.kafka.batch_size
+					fetch_max_wait:            resource.enrich.kafka.max_wait
+					max_yield_batch_bytes:     resource.enrich.kafka.batch_size
+					partition_buffer_bytes:    resource.enrich.kafka.buffer_size
 				}
 				processors: [
-					if resource.enrich.min_popularity > 0 {
+					if resource.enrich.filter.min_popularity > 0 {
+						label: "filter_popularity_\(prop)"
 						switch: [{
-							check: #"json("data.popularity").number(0) < \#(resource.enrich.min_popularity)"#
+							check: #"json("data.popularity").number(0) < \#(resource.enrich.filter.min_popularity)"#
 							processors: [
 								{
 									metric: {
 										type: "counter"
 										name: "enrich_low_popularity"
 										labels:
-											kind: resource.kind
+											kind: prop
 									}
 								},
 								{mapping: "root = deleted()"},
 							]
 						}]
 					},
+					if resource.enrich.transform != _|_ {
+						if resource.enrich.transform.mapping == true {
+							mapping: #"from "mapping/resource/\#(prop).blobl""#
+						} else {
+							mapping: #"from "\#(resource.enrich.transform.mapping)""#
+						}
+						if resource.enrich.transform.unarchive {
+							unarchive: {
+								format: "json_array"
+							}
+						}
+					},
 					{
-						label:   "\(resource.kind)_enrich"
+						label:   "meta_\(prop)"
 						mapping: """
               meta output_topic = "\(resource.topic.detail)"
               meta output_id = this.data.id
-              meta kind = "\(resource.kind)"
-              meta endpoint = "\(resource.enrich.endpoint)"
-                .format(this.data.id)
-              meta passthrough = \(resource.enrich.passthrough)
+              meta kind = "\(prop)"
+              meta endpoint = "\(resource.enrich.api.endpoint)"
+              meta passthrough = \(resource.enrich.api.passthrough)
               """
+					},
+					{
+						label:   "map_endpoint"
+						mapping: #"from "mapping/endpoint.blobl""#
 					},
 				]
 			}]
@@ -65,16 +86,16 @@ resources: {
 							},
 							{
 								mapping: """
-              root = {
-                "data": this.data,
-                "meta": {
-                  "v": 1,
-                  "ts": now(),
-                },
-                "source": this,
-                "connect": @,
-              }
-              """
+									root = {
+										"data": this.data,
+										"meta": {
+											"v": 1,
+											"ts": now(),
+										},
+										"source": this,
+										"connect": @,
+									}
+									"""
 							},
 						]
 					},
@@ -146,5 +167,4 @@ resources: {
 			compression:       "zstd"
 		}
 	}
-
 }

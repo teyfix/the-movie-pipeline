@@ -4,8 +4,8 @@ import "pipelines.lokal/shared/tmdb"
 
 publish: {
 	sources: {
-		for name, resource in tmdb.resources {
-			"tmdb_file_\(resource.kind)": {
+		for name, resource in tmdb.resources if resource.download != _|_ {
+			"tmdb_file_\(name)": {
 				type: "file"
 				include: [for prefix in resource.download.prefix {
 					"${TMDB_DOWNLOAD_DIR:?}/\(prefix)_ids_*.json.gz"
@@ -15,10 +15,10 @@ publish: {
 		}
 	}
 	transforms: {
-		for name, resource in tmdb.resources {
-			"tmdb_envelope_\(resource.kind)": {
+		for name, resource in tmdb.resources if resource.download != _|_ {
+			"tmdb_envelope_\(name)": {
 				type: "remap"
-				inputs: ["tmdb_file_\(resource.kind)"]
+				inputs: ["tmdb_file_\(name)"]
 				source: """
 					  parsed = parse_json!(.message)
 					  del(.message)

@@ -1,0 +1,10 @@
+map sanitize {
+  root = match {
+    this.type() == "object" => this.map_each(kv -> kv.value.apply("sanitize")),
+    this.type() == "array"  => this.map_each(v -> v.apply("sanitize")),
+    this.type() == "string" && this == "" => null,
+    _ => this
+  }
+}
+
+root = this.apply("sanitize")

@@ -49,6 +49,13 @@ import units "pipelines.lokal/shared/units"
 			buffer_size: units.#Size | *"200kb"
 		}
 	}
+	normalize: {
+		kafka: {
+			max_wait:    units.#Duration | *"5s"
+			batch_size:  units.#Size | *"5mb"
+			buffer_size: units.#Size | *batch_size
+		}
+	}
 	ingest: {
 		batch_size: units.#Size
 	}

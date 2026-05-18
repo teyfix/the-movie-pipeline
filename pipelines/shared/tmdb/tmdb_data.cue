@@ -20,6 +20,11 @@ resources: {
 			filter: min_popularity: 1
 			api: endpoint:          "/3/movie/{{ data.id }}?append_to_response=alternative_titles,credits,images,keywords,lists,recommendations,release_dates,reviews,similar,translations,videos,watch_providers"
 		}
+		normalize: {
+			kafka: {
+				batch_size: "30mb"
+			}
+		}
 		ingest: batch_size: "30mb"
 	}
 	show: {
@@ -40,6 +45,11 @@ resources: {
 			filter: min_popularity: 2
 			api: endpoint:          "/3/tv/{{ data.id }}?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch_providers"
 		}
+		normalize: {
+			kafka: {
+				batch_size: "16mb"
+			}
+		}
 		ingest: batch_size: "16mb"
 	}
 	person: {
@@ -59,6 +69,11 @@ resources: {
 		enrich: {
 			api: endpoint: "/3/person/{{ data.id }}?append_to_response=images,movie_credits,tagged_images,translations,tv_credits"
 		}
+		normalize: {
+			kafka: {
+				batch_size: "24mb"
+			}
+		}
 		ingest: batch_size: "24mb"
 	}
 	collection: {
@@ -77,6 +92,11 @@ resources: {
 		download: prefix: ["collection"]
 		enrich: {
 			api: endpoint: "/3/collection/{{ data.id }}"
+		}
+		normalize: {
+			kafka: {
+				batch_size: "2mb"
+			}
 		}
 		ingest: batch_size: "2mb"
 	}
@@ -98,6 +118,11 @@ resources: {
 			api: {
 				endpoint:    "/3/network/{{ data.id }}"
 				passthrough: true
+			}
+		}
+		normalize: {
+			kafka: {
+				batch_size: "200kb"
 			}
 		}
 		ingest: batch_size: "200kb"
@@ -122,6 +147,11 @@ resources: {
 				passthrough: true
 			}
 		}
+		normalize: {
+			kafka: {
+				batch_size: "100kb"
+			}
+		}
 		ingest: batch_size: "100kb"
 	}
 	production_company: {
@@ -144,6 +174,11 @@ resources: {
 				passthrough: true
 			}
 		}
+		normalize: {
+			kafka: {
+				batch_size: "200kb"
+			}
+		}
 		ingest: batch_size: "200kb"
 	}
 	season: {
@@ -163,6 +198,11 @@ resources: {
 			kafka: {
 				batch_size:  "5mb"
 				buffer_size: "10mb"
+			}
+		}
+		normalize: {
+			kafka: {
+				batch_size: "20mb"
 			}
 		}
 		ingest: batch_size: "20mb"

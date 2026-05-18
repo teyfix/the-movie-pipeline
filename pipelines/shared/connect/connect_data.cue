@@ -15,7 +15,7 @@ rate_limit_resources: [{
 processor_resources: [{
 	label: "error_mapping"
 	mapping: """
-		meta output_topic = meta("output_topic").or("tmdb-unknown") + "-dlq"
+		meta output_topic = meta("output_topic").or("tmdb.unknown") + ".dlq"
 
 		root = {
 		  "payload": this,

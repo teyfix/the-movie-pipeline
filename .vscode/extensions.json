@@ -1,3 +1,10 @@
 {
-  "recommendations": ["esbenp.prettier-vscode", "mtxr.sqltools", "mtxr.sqltools-driver-pg", "GeorgesHaidar.vsc-benthos", "ahmadalli.vscode-nginx-conf", "qufiwefefwoyn.inline-sql-syntax"]
+  "recommendations": [
+    "esbenp.prettier-vscode",
+    "mtxr.sqltools",
+    "mtxr.sqltools-driver-pg",
+    "GeorgesHaidar.vsc-benthos",
+    "ahmadalli.vscode-nginx-conf",
+    "qufiwefefwoyn.inline-sql-syntax"
+  ]
 }

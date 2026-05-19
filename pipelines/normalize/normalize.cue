@@ -1,6 +1,6 @@
 @experiment(try)
 
-package enrich
+package normalize
 
 import "pipelines.lokal/shared/tmdb"
 

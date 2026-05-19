@@ -47,6 +47,12 @@ const prettierConfig = {
         parser: "yaml",
       },
     },
+    {
+      files: ".vscode/*.json",
+      options: {
+        printWidth: 80,
+      },
+    },
   ],
 };
 

@@ -2,7 +2,7 @@ package seed
 
 import "pipelines.lokal/shared/tmdb"
 
-publish: {
+export: "seed/publish.yaml": {
 	sources: {
 		for name, resource in tmdb.resources if resource.download != _|_ {
 			"tmdb_file_\(name)": {
@@ -37,7 +37,7 @@ publish: {
 	}
 	sinks: {
 		tmdb_publish_redpanda: {
-			type: "kafka"
+			type: "redpanda"
 			inputs: ["tmdb_envelope_*"]
 			bootstrap_servers: "${KAFKA_BROKERS:?}"
 			topic:             "{{ meta.topic }}"

@@ -4,10 +4,10 @@ package enrich
 
 import "pipelines.lokal/shared/tmdb"
 
-resources: {
+export: "enrich/resources.yaml": {
 	input: {
 		broker: {
-			inputs: [for prop, resource in tmdb.resources {
+			inputs: [for prop, resource in tmdb.resources if resource.enrich != _|_ {
 				label: prop
 				redpanda: {
 					seed_brokers: ["${KAFKA_BROKERS}"]
@@ -158,7 +158,7 @@ resources: {
 	}
 
 	output: {
-		label: "kafka"
+		label: "redpanda"
 		redpanda: {
 			seed_brokers: ["${KAFKA_BROKERS}"]
 			topic:             #"${! meta("output_topic") }"#

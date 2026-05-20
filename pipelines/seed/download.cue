@@ -2,7 +2,7 @@ package seed
 
 import "pipelines.lokal/shared/tmdb"
 
-download: {
+export: "seed/download.yaml": {
 	sources: {
 		for name, resource in tmdb.resources if resource.download != _|_ {
 			for prefix in resource.download.prefix {
@@ -14,7 +14,7 @@ download: {
 					environment: {
 						KIND:               resource.kind
 						PREFIX:             prefix
-						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL:?}"
+						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL:?} "
 						TMDB_DOWNLOAD_DIR:  "${TMDB_DOWNLOAD_DIR:?}"
 					}
 					decoding: {

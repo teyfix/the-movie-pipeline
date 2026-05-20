@@ -10,10 +10,10 @@ import "strconv"
 
 import "pipelines.lokal/shared/tmdb"
 
-exports: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
-	"\(prop)": {
+export: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
+	"ingest/\(prop).yaml": {
 		input: {
-			label: "kafka"
+			label: "redpanda"
 			redpanda: {
 				seed_brokers: ["${KAFKA_BROKERS}"]
 				topics: [resource.topic.normalized]
@@ -28,16 +28,16 @@ exports: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
 			processors: [{
 				label:   "kafka_meta_\(prop)"
 				mapping: """
-            meta tmdb_id = this.data.id
-            meta tmdb_kind = "\(prop)"
-            meta tmdb_version = this.meta.ts
+					meta tmdb_id = this.data.id
+					meta tmdb_kind = "\(prop)"
+					meta tmdb_version = this.meta.ts
 
-            root = this.assign({
-              "data": {
-                "version_ts": this.meta.ts
-              }
-            })
-            """
+					root = this.assign({
+						"data": {
+							"version_ts": this.meta.ts
+						}
+					})
+					"""
 			}]
 		}
 
@@ -74,8 +74,8 @@ exports: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
 										log: {
 											level: "WARN"
 											message: """
-                      ${! json("~error.message").or("dropping the message with ~error field") }
-                      """
+												${! json("~error.message").or("dropping the message with ~error field") }
+												"""
 											fields_mapping: "root = this"
 										}
 									},

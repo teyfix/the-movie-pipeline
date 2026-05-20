@@ -5,21 +5,21 @@ import units "pipelines.lokal/shared/units"
 #Resource: {
 	kind: string
 	topic: {
-		embed?:     string
 		detail:     string
-		normalized: string
+		embed?:     string
 		export:     string
+		normalized: string
 	}
 	consumer: {
-		enrich:    string
-		normalize: string
 		embed?:    string
+		enrich:    string
 		ingest:    string
+		normalize: string
 	}
 	download?: {
 		prefix: [...string]
 	}
-	enrich: {
+	enrich?: {
 		// Drop messages below this popularity score before enrichment
 		filter: {
 			min_popularity: number | *0
@@ -49,7 +49,7 @@ import units "pipelines.lokal/shared/units"
 			buffer_size: units.#Size | *"200kb"
 		}
 	}
-	normalize: {
+	normalize?: {
 		kafka: {
 			max_wait:    units.#Duration | *"5s"
 			batch_size:  units.#Size | *"5mb"

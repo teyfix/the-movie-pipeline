@@ -1,0 +1,64 @@
+map embed_input {
+  let movie = this
+  let segments = [
+    ["Title", $movie.title],
+    ["Overview", $movie.overview],
+    ["Tagline", $movie.tagline],
+    [
+      "Cast",
+      $movie.credits.cast.
+        slice(0, 10).
+        # character can be null
+        map_each(c -> c.with("character", "name").values().filter(cn -> cn.or("") != "").join(" – ")).
+        join("; "),
+    ],
+    [
+      "Genres",
+      $movie.genres.slice(0, 10).
+        map_each(g -> g.name).
+        join("; "),
+    ],
+    [
+      "Keywords",
+      $movie.keywords.slice(0, 10).
+        map_each(k -> k.name).
+        join("; "),
+    ],
+    [
+      "Lists",
+      $movie.lists.slice(0, 10).
+        # description can be null
+        map_each(l -> l.with("name", "description").values().filter(nd -> nd.or("") != "").join(" – ")).
+        join("; "),
+    ],
+    [
+      "Reviews",
+      $movie.reviews.slice(0, 3).
+        map_each(r -> r.with("author", "content").values().join(" – ")).
+        join("; "),
+    ],
+  ]
+
+  root = $segments.
+    filter(s -> s.index(1).or("") != "").
+    map_each(o -> o.join(": ")).
+    join("\n")
+}
+
+root = if this.data.overview.or("") == "" { deleted() } else {
+  this.without("data", "meta").assign({
+    "data": {
+      "id": this.data.id,
+      "overview": this.data.apply("embed_input"),
+      "model": {
+        "id": env("EMBEDDING_MODEL").catch(null),
+        "dimensions": env("EMBEDDING_DIMENSIONS").number().catch(null),
+      },
+    },
+    "meta": {
+      "ts": now(),
+      "v": 1,
+    },
+    "connect": @
+  })
+}

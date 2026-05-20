@@ -25,6 +25,7 @@ resources: {
 				batch_size: "30mb"
 			}
 		}
+		embed: {}
 		ingest: batch_size: "30mb"
 	}
 	show: {

@@ -56,6 +56,23 @@ import units "pipelines.lokal/shared/units"
 			buffer_size: units.#Size | *batch_size
 		}
 	}
+	embed?: {
+		// Bloblang transform applied after fetch
+		transform: {
+			// true  → load from "mapping/resource/<name>.blobl"
+			// string → load from the given path
+			mapping: string | *true
+			// Unarchive the mapping output as a JSON array
+			unarchive: bool | *false
+		}
+
+		// Kafka consumer tuning
+		kafka: {
+			max_wait:    units.#Duration | *"5s"
+			batch_size:  units.#Size | *"5mb"
+			buffer_size: units.#Size | *batch_size
+		}
+	}
 	ingest: {
 		batch_size: units.#Size
 	}

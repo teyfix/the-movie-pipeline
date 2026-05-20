@@ -73,8 +73,27 @@ import units "pipelines.lokal/shared/units"
 			buffer_size: units.#Size | *batch_size
 		}
 	}
-	ingest: {
-		batch_size: units.#Size
+	ingest?: {
+		streams: [Name=string]: {
+			mapping: {
+				from?:       string
+				unarchive:   bool | *true
+				deduplicate: bool | *true
+				drop_error:  bool | *false
+			}
+			output: {
+				table: string
+				primary: [...string]
+				columns: [...string]
+				updated_at: bool | *false
+			}
+		}
+		// Kafka consumer tuning
+		kafka: {
+			max_wait:    units.#Duration | *"5s"
+			batch_size:  units.#Size | *"5mb"
+			buffer_size: units.#Size | *batch_size
+		}
 	}
 }
 

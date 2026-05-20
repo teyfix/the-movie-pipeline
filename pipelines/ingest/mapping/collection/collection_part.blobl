@@ -1,0 +1,11 @@
+root = this.data.parts.or([]).
+  enumerated().
+  map_each(kv -> kv.value.
+    with("media_type").
+    assign({
+      "collection_id": this.data.id,
+      "part_id": kv.value.id,
+      "part_index": kv.index,
+      "version_ts": this.meta.ts,
+    })
+  )

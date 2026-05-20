@@ -26,7 +26,6 @@ resources: {
 			}
 		}
 		embed: {}
-		ingest: batch_size: "30mb"
 	}
 	show: {
 		kind: "show"
@@ -51,7 +50,6 @@ resources: {
 				batch_size: "16mb"
 			}
 		}
-		ingest: batch_size: "16mb"
 	}
 	person: {
 		kind: "person"
@@ -75,7 +73,6 @@ resources: {
 				batch_size: "24mb"
 			}
 		}
-		ingest: batch_size: "24mb"
 	}
 	collection: {
 		kind: "collection"
@@ -99,7 +96,6 @@ resources: {
 				batch_size: "2mb"
 			}
 		}
-		ingest: batch_size: "2mb"
 	}
 	tv_network: {
 		kind: "tv_network"
@@ -126,7 +122,6 @@ resources: {
 				batch_size: "200kb"
 			}
 		}
-		ingest: batch_size: "200kb"
 	}
 	keyword: {
 		kind: "keyword"
@@ -153,7 +148,6 @@ resources: {
 				batch_size: "100kb"
 			}
 		}
-		ingest: batch_size: "100kb"
 	}
 	production_company: {
 		kind: "production-company"
@@ -180,7 +174,6 @@ resources: {
 				batch_size: "200kb"
 			}
 		}
-		ingest: batch_size: "200kb"
 	}
 	season: {
 		kind: "season"
@@ -206,6 +199,5 @@ resources: {
 				batch_size: "20mb"
 			}
 		}
-		ingest: batch_size: "20mb"
 	}
 }

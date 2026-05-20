@@ -16,14 +16,20 @@ import (
 	"pipelines.lokal/ingest"
 	"pipelines.lokal/normalize"
 	"pipelines.lokal/seed"
+	"pipelines.lokal/shared/tmdb"
+	"pipelines.lokal/shared/vector"
+	"pipelines.lokal/shared/connect"
 )
 
 exports:
-	seed.export &
-	enrich.export &
-	normalize.export &
+	connect.export &
 	embed.export &
+	enrich.export &
 	ingest.export &
+	normalize.export &
+	seed.export &
+	tmdb.export &
+	vector.export &
 	{}
 
 command: "export": {
@@ -33,7 +39,7 @@ command: "export": {
 	}
 
 	clean: exec.Run & {
-		cmd: ["rm", "-rf", path.Join([config.APP_STAGE, "*"])]
+		cmd: ["sh", "-c", "rm -rf \(config.APP_STAGE)/*"]
 	}
 
 	create: [for prop, data in exports {
@@ -53,6 +59,7 @@ command: "export": {
 
 	sync: exec.Run & {
 		$after: [create]
-		cmd: ["rsync", "--verbose", "--recursive", "--checksum", "--delete", config.APP_STAGE, config.APP_TARGET]
+		// --verbose --recursive --checksum --delete
+		cmd: ["rsync", "-vrcd", "\(config.APP_STAGE)/", "\(config.APP_TARGET)/"]
 	}
 }

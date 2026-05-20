@@ -7,6 +7,7 @@ import (
 	"path"
 	"tool/exec"
 	"tool/file"
+	"tool/os"
 )
 
 import (
@@ -26,15 +27,17 @@ exports:
 	{}
 
 command: "export": {
-	let stage = "out/stage/"
-	let target = "out/target/"
+	config: os.Getenv & {
+		APP_STAGE:  string | *"./out/stage"
+		APP_TARGET: string | *"./out/target"
+	}
 
 	clean: exec.Run & {
-		cmd: ["rm", "--recursive", "--force", stage]
+		cmd: ["rm", "-rf", path.Join([config.APP_STAGE, "*"])]
 	}
 
 	create: [for prop, data in exports {
-		let outfile = path.Join([stage, prop])
+		let outfile = path.Join([config.APP_STAGE, prop])
 
 		mkdir: file.MkdirAll & {
 			$after: [clean]
@@ -50,6 +53,6 @@ command: "export": {
 
 	sync: exec.Run & {
 		$after: [create]
-		cmd: ["rsync", "--verbose", "--recursive", "--checksum", "--delete", stage, target]
+		cmd: ["rsync", "--verbose", "--recursive", "--checksum", "--delete", config.APP_STAGE, config.APP_TARGET]
 	}
 }

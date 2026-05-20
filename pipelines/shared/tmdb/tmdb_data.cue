@@ -26,6 +26,31 @@ resources: {
 			}
 		}
 		embed: {}
+		ingest: {
+			kafka: {
+				batch_size: "30mb"
+			}
+		}
+	}
+	movie_embed: {
+		kind: "movie"
+		topic: {
+			embed:      "tmdb.embed.movie"
+			export:     "tmdb.export.movie"
+			detail:     "tmdb.detail.movie"
+			normalized: "tmdb.normalized.movie"
+		}
+		consumer: {
+			enrich:    "tmdb.enrich.movie.v1"
+			normalize: "tmdb.normalize.movie.v1"
+			embed:     "tmdb.embed.movie.v1"
+			ingest:    "tmdb.ingest.movie.v1"
+		}
+		ingest: {
+			kafka: {
+				batch_size: "30mb"
+			}
+		}
 	}
 	show: {
 		kind: "show"
@@ -46,6 +71,11 @@ resources: {
 			api: endpoint:          "/3/tv/{{ data.id }}?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch_providers"
 		}
 		normalize: {
+			kafka: {
+				batch_size: "16mb"
+			}
+		}
+		ingest: {
 			kafka: {
 				batch_size: "16mb"
 			}
@@ -73,6 +103,11 @@ resources: {
 				batch_size: "24mb"
 			}
 		}
+		ingest: {
+			kafka: {
+				batch_size: "24mb"
+			}
+		}
 	}
 	collection: {
 		kind: "collection"
@@ -92,6 +127,11 @@ resources: {
 			api: endpoint: "/3/collection/{{ data.id }}"
 		}
 		normalize: {
+			kafka: {
+				batch_size: "2mb"
+			}
+		}
+		ingest: {
 			kafka: {
 				batch_size: "2mb"
 			}
@@ -122,6 +162,11 @@ resources: {
 				batch_size: "200kb"
 			}
 		}
+		ingest: {
+			kafka: {
+				batch_size: "200kb"
+			}
+		}
 	}
 	keyword: {
 		kind: "keyword"
@@ -144,6 +189,11 @@ resources: {
 			}
 		}
 		normalize: {
+			kafka: {
+				batch_size: "100kb"
+			}
+		}
+		ingest: {
 			kafka: {
 				batch_size: "100kb"
 			}
@@ -174,6 +224,11 @@ resources: {
 				batch_size: "200kb"
 			}
 		}
+		ingest: {
+			kafka: {
+				batch_size: "200kb"
+			}
+		}
 	}
 	season: {
 		kind: "season"
@@ -195,6 +250,11 @@ resources: {
 			}
 		}
 		normalize: {
+			kafka: {
+				batch_size: "20mb"
+			}
+		}
+		ingest: {
 			kafka: {
 				batch_size: "20mb"
 			}

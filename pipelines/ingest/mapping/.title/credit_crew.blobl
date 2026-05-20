@@ -1,0 +1,9 @@
+root = this.data.credits.crew.
+  map_each(c -> c.
+    with("department", "job").
+    assign({
+      "credit_id" : "00000000%s".format(c.credit_id),
+      "version_ts": this.meta.ts,
+    })
+  ).
+  flatten()

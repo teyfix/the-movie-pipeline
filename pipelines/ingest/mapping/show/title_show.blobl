@@ -1,0 +1,8 @@
+root = this.data.
+  with("number_of_episodes", "number_of_seasons", "last_air_date", "in_production", "type").
+  assign({
+    "title_id": this.data.id,
+    "last_episode_id": this.data.last_episode_to_air.id,
+    "next_episode_id": this.data.next_episode_to_air.id,
+    "version_ts": this.meta.ts,
+  })

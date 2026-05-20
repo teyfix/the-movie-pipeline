@@ -1,0 +1,8 @@
+root = this.data.content_ratings.
+  map_each(r -> r.
+    with("iso_3166_1", "rating", "descriptors").
+    assign({
+      "title_id": this.data.id,
+      "version_ts": this.meta.ts,
+    })
+  )

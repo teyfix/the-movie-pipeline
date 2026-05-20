@@ -10,7 +10,7 @@ import "strconv"
 
 import "pipelines.lokal/shared/tmdb"
 
-for prop, resource in tmdb.resources if resource.ingest != _|_ {
+exports: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
 	"\(prop)": {
 		input: {
 			label: "kafka"
@@ -62,7 +62,7 @@ for prop, resource in tmdb.resources if resource.ingest != _|_ {
 							mapping: #"from "mapping/\#(prop)/\#(name).blobl""#
 						} else {
 							label:   "mapping_\(name)"
-							mapping: #"from "\#(stream.mapping.from)"#
+							mapping: #"from "\#(stream.mapping.from)""#
 						},
 						if stream.mapping.drop_error {
 							label: "drop_error_\(name)"
@@ -146,4 +146,5 @@ for prop, resource in tmdb.resources if resource.ingest != _|_ {
 		}
 		}
 	}
+}
 }

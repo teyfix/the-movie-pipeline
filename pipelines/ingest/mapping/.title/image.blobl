@@ -1,0 +1,15 @@
+root = this.data.images.
+  with("backdrops", "logos", "posters").
+  key_values().
+  map_each(kv -> kv.value.
+    map_each(p -> p.
+      with("file_path", "iso_639_1", "iso_3166_1", "width", "height", "aspect_ratio", "vote_average", "vote_count").
+      assign({
+        "kind": kv.key,
+        "title_id": this.data.id,
+        "title_kind": @tmdb_kind,
+        "version_ts": this.meta.ts,
+      })
+    )
+  ).
+  flatten()

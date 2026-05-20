@@ -1,0 +1,16 @@
+root = [].concat(
+  this.data.origin_country.
+    map_each(iso_3166_1 -> {
+      "iso_3166_1": iso_3166_1,
+      "kind": "origin",
+      "title_id": this.data.id,
+      "title_kind": @tmdb_kind,
+    }),
+  this.data.production_countries.
+    map_each(pc -> {
+      "iso_3166_1": pc.iso_3166_1,
+      "kind": "production",
+      "title_id": this.data.id,
+      "title_kind": @tmdb_kind,
+    }),
+)

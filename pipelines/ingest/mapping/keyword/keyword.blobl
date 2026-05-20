@@ -1,0 +1,3 @@
+root = this.data.
+  with("id", "name").
+  assign({ "kind": "keywords" })

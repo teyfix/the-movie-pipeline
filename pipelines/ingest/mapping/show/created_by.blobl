@@ -1,0 +1,6 @@
+root = this.data.created_by.
+  map_each(c -> {
+    "person_id": c.id,
+    "title_id": this.data.id,
+    "version_ts": this.meta.ts
+  })

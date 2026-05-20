@@ -1,0 +1,6 @@
+root = this.data.also_known_as.
+  map_each(aka -> {
+    "person_id": this.data.id,
+    "also_known_as": aka,
+    "version_ts": this.meta.ts
+  })

@@ -1,0 +1,22 @@
+root = this.data.episodes.
+  map_each(e -> e.
+    with(
+      "id",
+      "show_id",
+      "season_number",
+      "episode_number",
+      "name",
+      "episode_type",
+      "air_date",
+      "overview",
+      "production_code",
+      "still_path",
+      "runtime",
+      "vote_average",
+      "vote_count",
+    ).
+    assign({
+      "title_id": this.source.data.id,
+      "version_ts": this.source.meta.ts
+    })
+  )

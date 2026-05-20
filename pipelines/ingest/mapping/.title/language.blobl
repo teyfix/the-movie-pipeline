@@ -1,0 +1,7 @@
+root = this.data.spoken_languages.
+  map_each(l -> {
+    "iso_639_1": l.iso_639_1,
+    "title_id": this.data.id,
+    "title_kind": @tmdb_kind,
+    "version_ts": this.meta.ts,
+  })

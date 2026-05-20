@@ -98,3 +98,4 @@ import units "pipelines.lokal/shared/units"
 }
 
 resources: [Name=string]: #Resource
+export: "values/tmdb.yaml": resources

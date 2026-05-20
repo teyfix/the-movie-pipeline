@@ -29,10 +29,15 @@ command: "export": {
 	let stage = "out/stage/"
 	let target = "out/target/"
 
+	clean: exec.Run & {
+		cmd: ["rm", "--recursive", "--force", stage]
+	}
+
 	create: [for prop, data in exports {
 		let outfile = path.Join([stage, prop])
 
 		mkdir: file.MkdirAll & {
+			$after: [clean]
 			"path": path.Dir(outfile)
 		}
 

@@ -1,8 +1,0 @@
-root = this.data.alternative_titles.map_each(t -> t.
-  with("iso_3166_1", "title", "type").
-  assign({
-    "title_id": this.data.id,
-    "title_kind": @tmdb_kind,
-    "version_ts": @tmdb_version,
-  })
-)

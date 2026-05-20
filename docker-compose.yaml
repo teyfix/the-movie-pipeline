@@ -13,4 +13,3 @@ include:
   - ${PWD}/services/sample/docker-compose.yaml
   - ${PWD}/services/tei/docker-compose.yaml
   - ${PWD}/services/tmdb/docker-compose.yaml
-  - ${PWD}/pipelines/docker-compose.yaml

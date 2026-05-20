@@ -15,7 +15,7 @@ info() {
   log_entry "info" "kafka-init" "$@"
 }
 
-CONFIG_FILE="/values/tmdb.yaml"
+CONFIG_FILE="$CONFIGDIR_TARGET/values/tmdb.yaml"
 BOOTSTRAP_SERVERS=${KAFKA_BROKERS}
 
 # Topic settings
@@ -29,7 +29,7 @@ SMALL_SEGMENT_BYTES=16777216  # 16MB for small topics (export, embeddings, etc.)
 LARGE_SEGMENT_BYTES=536870912 # 512MB for large topics (detail, normalized, etc.)
 
 # Extract topics from config
-TOPICS=($(yq e '(.resources[].topic[], .extras[].topic[])' "$CONFIG_FILE"))
+TOPICS=($(yq e '.resources[].topic[]' "$CONFIG_FILE"))
 
 if [[ -z "${TOPICS[*]:-}" ]]; then
   info "No topics found in $CONFIG_FILE"

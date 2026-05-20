@@ -1,9 +1,0 @@
-root = this.data.credits.cast.
-  map_each(c -> c.
-    with("cast_id", "order", "character").
-    assign({
-      "credit_id" : "00000000%s".format(c.credit_id),
-      "version_ts": this.meta.ts,
-    })
-  ).
-  flatten()

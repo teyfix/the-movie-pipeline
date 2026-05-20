@@ -1,3 +1,0 @@
-root = this.data.assign({
-  "version_ts": this.meta.ts,
-})

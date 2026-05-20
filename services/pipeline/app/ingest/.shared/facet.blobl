@@ -1,9 +1,0 @@
-root = this.data.with("genres", "keywords").
-  key_values().
-  map_each(kv -> kv.value.
-    map_each(f -> f.
-      with("id", "name").
-      assign({ "kind": kv.key })
-    )
-  ).
-  flatten()

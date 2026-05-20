@@ -1,7 +1,0 @@
-root = this.data.
-  with("budget", "revenue", "runtime", "imdb_id", "video").
-  assign({
-    "title_id": this.data.id,
-    "collection_id": this.data.belongs_to_collection.id,
-    "version_ts": this.meta.ts,
-  })

@@ -1,8 +1,0 @@
-root = this.data.screened_theatrically.
-  map_each(st -> st.
-    with("id", "season_number", "episode_number").
-    assign({
-      "title_id": this.data.id,
-      "version_ts": this.meta.ts,
-    })
-  )

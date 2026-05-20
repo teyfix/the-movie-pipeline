@@ -1,9 +1,0 @@
-root = this.data.videos.
-  map_each(v -> v.
-    assign({
-      "id": "00000000%s".format(v.id),
-      "title_id": this.data.id,
-      "title_kind": "movie",
-      "version_ts": this.meta.ts,
-    })
-  )

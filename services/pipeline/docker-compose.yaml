@@ -158,6 +158,7 @@ services:
     environment:
       <<: *connect-env
       SERVICE_NAME: embed
+      TEI_API_URL: http://tei.lokal:8080
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:?}
     networks:

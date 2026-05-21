@@ -2,19 +2,21 @@ package tmdb
 
 import units "pipelines.lokal/shared/units"
 
+nsp: "tmdb"
+
 #Resource: {
 	kind: string
 	topic: {
-		detail:     string
-		embed?:     string
-		export?:     string
-		normalized: string
+		export:     string | *"\(nsp).export.\(kind)"
+		detail:     string | *"\(nsp).detail.\(kind)"
+		normalized: string | *"\(nsp).normalized.\(kind)"
+		embed:      string | *"\(nsp).embed.\(kind)"
 	}
 	consumer: {
-		embed?:    string
-		enrich?:    string
-		ingest:    string
-		normalize: string
+		enrich:    string | *"\(nsp).enrich.\(kind).v1"
+		normalize: string | *"\(nsp).normalize.\(kind).v1"
+		embed:     string | *"\(nsp).embed.\(kind).v1"
+		ingest:    string | *"\(nsp).ingest.\(kind).v1"
 	}
 	download?: {
 		prefix: [...string]

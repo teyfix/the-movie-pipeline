@@ -38,9 +38,9 @@ export: "embed/resources": {
 					{
 						label:   "meta_\(prop)"
 						mapping: """
-            meta output_topic = "\(resource.topic.embed)"
-            meta output_id = this.data.id.or(this.source.data.id)
-            meta kind = "\(prop)"
+            meta tmdb_id = this.data.id.or(this.source.data.id)
+            meta tmdb_kind = "\(resource.kind)"
+            meta tmdb_topic = "\(resource.topic.embed)"
             """
 					},
 				]
@@ -100,8 +100,8 @@ export: "embed/resources": {
 		label: "redpanda"
 		redpanda: {
 			seed_brokers: ["${KAFKA_BROKERS}"]
-			topic:             #"${! meta("output_topic") }"#
-			key:               #"${! meta("output_id") }"#
+			topic:             #"${! meta("tmdb_topic") }"#
+			key:               #"${! meta("tmdb_id") }"#
 			max_message_bytes: "100MB"
 			compression:       "zstd"
 		}

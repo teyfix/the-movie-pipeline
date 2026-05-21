@@ -33,7 +33,7 @@ export: "enrich/resources": {
 										type: "counter"
 										name: "enrich_low_popularity"
 										labels:
-											kind: prop
+											kind: resource.kind
 									}
 								},
 								{mapping: "root = deleted()"},
@@ -55,9 +55,9 @@ export: "enrich/resources": {
 					{
 						label:   "meta_\(prop)"
 						mapping: """
-              meta output_topic = "\(resource.topic.detail)"
-              meta output_id = this.data.id
-              meta kind = "\(prop)"
+              meta tmdb_id = this.data.id
+              meta tmdb_kind = "\(resource.kind)"
+              meta tmdb_topic = "\(resource.topic.detail)"
               meta endpoint = "\(resource.enrich.api.endpoint)"
               meta passthrough = \(resource.enrich.api.passthrough)
               """
@@ -83,7 +83,7 @@ export: "enrich/resources": {
 									type: "counter"
 									name: "enrich_passthrough"
 									labels:
-										kind: "@kind"
+										kind: "@tmdb_kind"
 								}
 							},
 							{
@@ -163,8 +163,8 @@ export: "enrich/resources": {
 		label: "redpanda"
 		redpanda: {
 			seed_brokers: ["${KAFKA_BROKERS}"]
-			topic:             #"${! meta("output_topic") }"#
-			key:               #"${! meta("output_id") }"#
+			topic:             #"${! meta("tmdb_topic") }"#
+			key:               #"${! meta("tmdb_id") }"#
 			max_message_bytes: "100MB"
 			compression:       "zstd"
 		}

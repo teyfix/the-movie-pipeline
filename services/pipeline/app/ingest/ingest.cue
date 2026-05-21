@@ -29,7 +29,7 @@ export: {for prop, resource in tmdb.resources if resource.ingest != _|_ {
 				label:   "kafka_meta_\(prop)"
 				mapping: """
 					meta tmdb_id = this.data.id
-					meta tmdb_kind = "\(prop)"
+					meta tmdb_kind = "\(resource.kind)"
 					meta tmdb_version = this.meta.ts
 
 					root = this.assign({

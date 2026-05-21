@@ -1,0 +1,6 @@
+meta endpoint = this.
+  collapse().
+  key_values().
+  fold(@endpoint, item -> item.tally.
+    re_replace_all(["{{", item.value.key, "}}"].join("\\s*"), item.value.value.string())
+  )

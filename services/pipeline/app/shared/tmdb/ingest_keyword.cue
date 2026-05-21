@@ -1,0 +1,15 @@
+package tmdb
+
+resources: keyword: ingest: streams: {
+	keyword: {
+		mapping: {
+			unarchive: false
+		}
+		output: {
+			table: "facet"
+			primary: ["id", "kind"]
+			columns: ["name"]
+			updated_at: true
+		}
+	}
+}

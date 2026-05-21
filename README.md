@@ -2,6 +2,29 @@
 
 A Kafka-powered data pipeline that ingests [The Movie Database](https://www.themoviedb.org) daily exports, enriches them via the TMDB API, normalizes nested structures, optionally generates text embeddings, and loads everything into a PostgreSQL database with vector support.
 
+<details>
+<summary>Expand <strong>Table of Contents</strong></summary>
+
+## Table of Contents
+
+- [The Movie Pipeline](#the-movie-pipeline)
+  - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
+  - [Architecture](#architecture)
+  - [Grafana Dashboard](#grafana-dashboard)
+  - [Prerequisites](#prerequisites)
+  - [Accessing Services](#accessing-services)
+    - [With Traefik (Recommended)](#with-traefik-recommended)
+    - [Without Traefik](#without-traefik)
+  - [Core Services](#core-services)
+  - [Data Flow](#data-flow)
+  - [Taskfile Commands](#taskfile-commands)
+  - [Configuration](#configuration)
+  - [Optional Profiles](#optional-profiles)
+  - [Development Tooling](#development-tooling)
+
+</details>
+
 ## Quick Start
 
 1. Get your API Read Access Token from [TMDB Profile](https://www.themoviedb.org/settings/api)
@@ -62,6 +85,10 @@ flowchart TD
 ```
 
 **Observability:** Prometheus, Grafana, Loki, and Vector collect metrics and logs across all services.
+
+## Grafana Dashboard
+
+![Grafana Dashboard](docs/grafana-dashboard-0.png)
 
 ## Prerequisites
 

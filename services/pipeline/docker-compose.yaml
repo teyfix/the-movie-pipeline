@@ -10,20 +10,30 @@ x-pipeline: &pipeline
     context: ${PWD}/services/pipeline
     args:
       ALPINE_IMAGE: ${ALPINE_IMAGE:?}
-      GOMPLATE_IMAGE: ${GOMPLATE_IMAGE:?}
+      CUE_IMAGE: ${CUE_IMAGE:?}
       RD_CONNECT_IMAGE: ${RD_CONNECT_IMAGE:?}
       REDPANDA_IMAGE: ${REDPANDA_IMAGE:?}
       VECTOR_IMAGE: ${VECTOR_IMAGE:?}
   entrypoint: /bin/bash
-  command: /entrypoint.sh
+  command: /app/entrypoint.sh
   user: root
+  volumes:
+    - ${PWD}/services/pipeline/app:/app:ro
+  
   tmpfs:
-    - /tmp/pipeline
+    - /config
     - /home/pipeline
 
-x-connect-env: &connect-env
-  EXEC_CMD: redpanda-connect streams -o config/observability.yaml -r config/resources.yaml -w pipelines/**/*.yaml
+x-common-env: &common-env
   KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+
+x-vector-env: &vector-env
+  <<: *common-env
+  EXEC_CMD: vector -w -c "$$CONFIGDIR_TARGET/vector/*.yaml" -c "$$CONFIGDIR_TARGET/$$SERVICE_NAME/**/*.yaml"
+
+x-connect-env: &connect-env
+  <<: *common-env
+  EXEC_CMD: redpanda-connect streams -o $$CONFIGDIR_TARGET/connect/observability.yaml -r $$CONFIGDIR_TARGET/connect/resources.yaml -w $$CONFIGDIR_TARGET/$$SERVICE_NAME/**/*.yaml
 
 volumes:
   seed_tmdb:
@@ -37,16 +47,12 @@ services:
     <<: *pipeline
     restart: on-failure
     environment:
-      EXEC_CMD: /app/entrypoint.sh
-      KAFKA_BROKERS: ${KAFKA_BROKERS:?}
+      <<: *common-env
+      EXEC_CMD: /app/kafka/entrypoint.sh
       KAFKA_CLEANUP_POLICY: ${KAFKA_CLEANUP_POLICY:?}
       KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:?}
       KAFKA_MAX_MESSAGE_BYTES: ${KAFKA_MAX_MESSAGE_BYTES:?}
       KAFKA_NUM_PARTITIONS: ${KAFKA_NUM_PARTITIONS:?}
-    volumes:
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/kafka:/app:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
     networks:
       net-kafka:
     deploy:
@@ -64,18 +70,16 @@ services:
     <<: *pipeline
     restart: unless-stopped
     environment:
-      EXEC_CMD: vector -w -c "config/*.yaml" -c "pipelines/**/*.yaml"
-      KAFKA_BROKERS: ${KAFKA_BROKERS:?}
-      VECTOR_DATA_DIR: /data/vector
+      <<: *vector-env
+      SERVICE_NAME: seed
+      DATADIR_TMDB: ${DATADIR_TMDB:?}
+      DATADIR_VECTOR: ${DATADIR_VECTOR:?}
       TMDB_FILES_API_URL: http://tmdb.lokal:9090
-      TMDB_DOWNLOAD_DIR: /data/tmdb
       TMDB_DOWNLOAD_INTERVAL_SECS: 3600
     volumes:
-      - seed_vector:/data/vector
-      - seed_tmdb:/data/tmdb
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/seed:/app:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
+      - seed_tmdb:${DATADIR_TMDB:?}
+      - seed_vector:${DATADIR_VECTOR:?}
+      - ${PWD}/services/pipeline/app:/app:ro
     networks:
       net-kafka:
       net-pipeline: { aliases: [seed.lokal] }
@@ -101,13 +105,9 @@ services:
     restart: unless-stopped
     environment:
       <<: *connect-env
+      SERVICE_NAME: enrich
       TMDB_API_URL: http://tmdb.lokal:8080
       TMDB_API_SECRET: ${TMDB_API_SECRET:?}
-    volumes:
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
-      - ${PWD}/services/pipeline/app/connect:/app/config:ro
-      - ${PWD}/services/pipeline/app/enrich:/app/pipelines:ro
     networks:
       net-kafka:
       net-pipeline: { aliases: [enrich.lokal] }
@@ -133,11 +133,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *connect-env
-    volumes:
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
-      - ${PWD}/services/pipeline/app/connect:/app/config:ro
-      - ${PWD}/services/pipeline/app/normalize:/app/pipelines:ro
+      SERVICE_NAME: normalize
     networks:
       net-kafka:
       net-pipeline: { aliases: [normalize.lokal] }
@@ -161,13 +157,10 @@ services:
     restart: unless-stopped
     environment:
       <<: *connect-env
+      SERVICE_NAME: embed
+      TEI_API_URL: http://tei.lokal:8080
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:?}
-    volumes:
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
-      - ${PWD}/services/pipeline/app/connect:/app/config:ro
-      - ${PWD}/services/pipeline/app/embed:/app/pipelines:ro
     networks:
       net-kafka:
       net-pipeline: { aliases: [embed.lokal] }
@@ -195,6 +188,7 @@ services:
     restart: unless-stopped
     environment:
       <<: *connect-env
+      SERVICE_NAME: ingest
       PG_SCHEMA: ${PG_SCHEMA:?}
       POSTGRES_URL: ${POSTGRES_URL:?}
       INGEST_MAX_IN_FLIGHT: ${INGEST_MAX_IN_FLIGHT:?}
@@ -202,11 +196,6 @@ services:
       INGEST_CONN_MAX_IDLE: ${INGEST_CONN_MAX_IDLE:?}
       INGEST_CONN_MAX_LIFE_TIME: ${INGEST_CONN_MAX_LIFE_TIME:?}
       EMBEDDING_DIMENSIONS_MAX: ${EMBEDDING_DIMENSIONS_MAX:?}
-    volumes:
-      - ${PWD}/services/pipeline/values:/values:ro
-      - ${PWD}/services/pipeline/app/entrypoint.sh:/entrypoint.sh:ro
-      - ${PWD}/services/pipeline/app/connect:/app/config:ro
-      - ${PWD}/services/pipeline/app/ingest:/app/pipelines:ro
     networks:
       net-kafka:
       net-pgbouncer:

@@ -1,9 +1,0 @@
-streams:
-  keyword:
-    mapping:
-      unarchive: false
-    output:
-      table: facet
-      primary: [id, kind]
-      columns: [name]
-      updated_at: true

@@ -48,6 +48,7 @@ map embed_input {
 root = if this.data.overview.or("") == "" { deleted() } else {
   this.without("data", "meta").assign({
     "data": {
+      "id": this.data.id,
       "overview": this.data.apply("embed_input"),
       "model": {
         "id": env("EMBEDDING_MODEL").catch(null),
@@ -55,11 +56,9 @@ root = if this.data.overview.or("") == "" { deleted() } else {
       },
     },
     "meta": {
-      "source": "tmdb",
-      "table": "movie_embeddings",
-      "topic": "tmdb-embed-movie",
       "ts": now(),
       "v": 1,
-    }
+    },
+    "connect": @
   })
 }

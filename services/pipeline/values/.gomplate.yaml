@@ -1,3 +1,0 @@
-datasources:
-  tmdb:
-    url: file:///values/tmdb.yaml

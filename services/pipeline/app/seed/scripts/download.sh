@@ -33,7 +33,7 @@ for date in "$date_today" "$date_yesterday"; do
   url="${TMDB_FILES_API_URL}/p/exports/${PREFIX}_ids_${date}.json.gz"
   dest="${TMDB_DOWNLOAD_DIR}/${PREFIX}_ids_${date}.json.gz"
 
-  if curl -fsSL -o "$staging_file" "$url"; then
+  if wget -qO "$staging_file" "$url"; then
     mv "$staging_file" "$dest"
     log_status "success"
     exit 0

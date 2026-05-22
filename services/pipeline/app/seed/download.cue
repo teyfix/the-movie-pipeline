@@ -16,7 +16,7 @@ export: "seed/download": {
 					environment: {
 						KIND:               resource.kind
 						PREFIX:             prefix
-						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL:?} "
+						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL:?}"
 						TMDB_DOWNLOAD_DIR:  "${DATADIR_TMDB:?}"
 					}
 					decoding: {

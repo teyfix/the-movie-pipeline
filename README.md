@@ -196,7 +196,7 @@ Some services are heavy or diagnostic and are gated behind Docker Compose profil
 
 ## Shared image adoption
 
-PostgreSQL/pooling/exporters and the TMDB API/files caches use published `teyfix/*` commit tags in Compose. See [PostgreSQL](services/postgres/README.md) and [TMDB caches](services/tmdb/README.md) for configuration, connection changes and state paths. The Vector/Connect engine wrappers, TEI proxy and observability collector remain consumer-owned in this first migration; their replacement needs its own render/reload and runtime verification.
+PostgreSQL/pooling/exporters and the TMDB API/files caches use published `teyfix/*` commit tags in Compose. See [PostgreSQL](services/postgres/README.md) and [TMDB caches](services/tmdb/README.md) for configuration, connection changes and state paths. Vector and Connect workers also use the shared image lifecycle; [pipeline configuration](services/pipeline/README.md) documents rendering, provisioning, reload and state. The TEI proxy and observability collector retain their existing wrappers.
 
 ## Bloblang tooling
 

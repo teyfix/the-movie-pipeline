@@ -2,13 +2,6 @@ package vector
 
 export: {
 	"vector/config": {
-		data_dir: "${DATADIR_VECTOR:?}"
-
-		api: {
-			enabled: true
-			address: "0.0.0.0:8686"
-		}
-
 		healthchecks: {
 			enabled: true
 		}

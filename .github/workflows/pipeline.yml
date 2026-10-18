@@ -1,0 +1,40 @@
+name: Pipeline configuration
+
+on:
+  pull_request:
+    paths:
+      - services/pipeline/**
+      - scripts/check-pipeline.sh
+      - .example.env
+      - docker-compose.yaml
+      - .github/workflows/pipeline.yml
+  push:
+    branches: [main]
+    paths:
+      - services/pipeline/**
+      - scripts/check-pipeline.sh
+      - .example.env
+      - docker-compose.yaml
+      - .github/workflows/pipeline.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NORMALIZE_RESOURCE_CPU: "2"
+      NORMALIZE_RESOURCE_MEM: 2G
+      INGEST_RESOURCE_CPU: "2"
+      INGEST_RESOURCE_MEM: 2G
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Configure isolated development inputs
+        run: |
+          cp .example.env .env
+          docker network create traefik_proxy
+      - name: Validate every worker with its native engine
+        run: bash scripts/check-pipeline.sh

@@ -1,0 +1,19 @@
+sources:
+  pipeline_file:
+    type: file
+    include: [/mnt/log/pipeline/*/engine.jsonl]
+
+transforms:
+  enrich_pipeline:
+    type: remap
+    inputs: [pipeline_file]
+    source: |
+      parsed, err = parse_json(.message)
+      record = if err == null { parsed } else { {"message": .message} }
+      origin = parse_regex!(string!(.file), r'/pipeline/(?P<service>[^/]+)/engine[.]jsonl$')
+      del(.message)
+      . = {
+        "log": record,
+        "meta": {"service": origin.service},
+        "vector": .
+      }

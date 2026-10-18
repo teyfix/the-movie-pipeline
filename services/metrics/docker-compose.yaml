@@ -159,6 +159,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Log exporter – File
       - ${PWD}/.state/postgres/logs:/mnt/log/postgres:ro
+      - ${PWD}/.state/pipeline/logs:/mnt/log/pipeline:ro
       - tei_log:/mnt/log/tei:ro
       - ${PWD}/.state/tmdb:/mnt/log/tmdb:ro
       # Storage exporter – Executing `du -s` requires root

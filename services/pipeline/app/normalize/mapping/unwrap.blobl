@@ -39,4 +39,4 @@ root.release_dates = if $props.contains("release_dates") {
 }
 
 # === Preserve Original Structure ===
-root = this.assign({ "data": root })
+root = this.without("data").assign({ "data": root })

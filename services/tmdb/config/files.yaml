@@ -1,0 +1,20 @@
+routes:
+  - name: tmdb_files
+    upstream: https://files.tmdb.org
+    timeouts: { connect: 5s, read: 15s, send: 5s }
+    cache:
+      ttl: 30d
+      ttl_mode: override
+      inactive: 30d
+      max_size: 2g
+      status_ttl: { "201": 30d, "204": 30d, "404": 1h, "500": 1m, "502": 1m, "503": 1m, "504": 1m }
+      lock: { timeout: 30s, age: 30s }
+      stale: [error, timeout, updating, http_404, http_500, http_502, http_503, http_504]
+      background_update: true
+    upstream_headers:
+      Accept-Encoding: gzip
+      X-Forwarded-Host: ""
+      X-Forwarded-For: ""
+      X-Forwarded-Proto: ""
+      X-Real-IP: ""
+      Referer: ""

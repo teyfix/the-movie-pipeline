@@ -1,67 +1,18 @@
-# TMDB Cache Proxy
+# TMDB caches
 
-Caching reverse proxy for TMDB upstreams. Reduces API load and allows the pipeline to restart idempotently without re-fetching recent data.
+Two instances of the published `teyfix/cache-proxy` image replace the native NGINX configuration. Compose selects a tested catalog revision; [the shared contract](https://github.com/teyfix/containers/blob/main/svc/cache-proxy/README.md) owns rendering, validation, readiness and log fields.
 
-## Upstreams
+| Service      | Internal URL                   | Configuration       | Upstream                     |
+| ------------ | ------------------------------ | ------------------- | ---------------------------- |
+| `tmdb`       | `http://tmdb.lokal:8080`       | `config/api.yaml`   | `https://api.themoviedb.org` |
+| `tmdb-files` | `http://tmdb-files.lokal:8080` | `config/files.yaml` | `https://files.tmdb.org`     |
 
-| Port   | Upstream             | Purpose                    |
-| ------ | -------------------- | -------------------------- |
-| `8080` | `api.themoviedb.org` | TMDB REST API (CloudFront) |
-| `9090` | `files.tmdb.org`     | Daily ID export files (S3) |
+The existing Traefik `api.<base-domain>`/`files.<base-domain>` and fallback NGINX hostnames remain available. Seed now uses the files service on 8080 instead of `tmdb.lokal:9090`. The `enrich` CUE configuration calls the API cache without a caller Authorization header: the cache adds the configured `TMDB_API_SECRET` as the upstream Bearer credential. This explicitly permits shared caching of TMDB's public catalog responses. Incoming caller Authorization/Cookie headers still trigger the image's cache bypass.
 
-## Caching
+Both routes retain 30-day success lifetimes/inactivity, 1-hour 404 caching, 1-minute server-error caching, 30-second cache locks and stale/background update policies. API storage is capped at 20 GB, downloads at 2 GB. The shared image overrides upstream freshness while still refusing responses marked private/no-store/no-cache or carrying Set-Cookie. It no longer unconditionally ignores those privacy directives. `enrich` continues to own its 40 RPS rate limit.
 
-- **`tmdb_api`** zone: 20GB max, 500MB key index, 30d inactive.
-- **`tmdb_files`** zone: 2GB max, 1MB key index, 30d inactive.
-- **Policy:** Ignores upstream `Cache-Control` and forces caching.
-- **Success:** 200/201/204 cached for 30 days.
-- **Not found:** 404 cached for 1h (prevents repeated misses).
-- **Errors:** 5xx cached for 1m (protects origin).
-- **Stale:** Serves stale on error, timeout, updating, and 5xx.
-- **SNI:** Enabled for CloudFront TLS (`proxy_ssl_server_name on`).
+Reusable responses live under `.cache/tmdb/{api,files}`; access/error logs live under `.state/tmdb/{api-logs,files-logs}`. Vector reads `cache-proxy-access.jsonl` from both log directories and reports storage usage from the new cache paths. Healthchecks use the image's local `/healthz` endpoint and do not fetch from TMDB.
 
-## Rate Limiting
+The old named cache/log volumes remain intact. The shared image uses a different request identity and starts a new cache namespace; no old entries are deleted or claimed to be reusable. Preserve `.cache/` when resetting disposable `.state`.
 
-The `enrich` service enforces a 40 RPS local rate limit. The nginx cache absorbs duplicate requests, so the actual upstream hit rate is very low after warm-up.
-
-## Access
-
-| Service    | Traefik                                 | Direct (nginx)                              |
-| ---------- | --------------------------------------- | ------------------------------------------- |
-| TMDB API   | `https://api.tmdb.127-0-0-1.sslip.io`   | `http://tmdb-api.127-0-0-1.sslip.io:8000`   |
-| TMDB Files | `https://files.tmdb.127-0-0-1.sslip.io` | `http://tmdb-files.127-0-0-1.sslip.io:8000` |
-
-You can also use [teyfix/traefik](https://github.com/teyfix/traefik) for automatic TLS routing.
-
-## Logs
-
-JSON access logs include upstream timing and cache status.
-
-> [!TIP]  
-> When nginx makes multiple upstream attempts (due to timeouts or connection failures), the `urt`, `uct`, and `uht` fields will contain comma-separated values — one per attempt. A `-` indicates the value was unavailable for that attempt.
-
-Example:
-
-```json
-{
-  "args": "append_to_response=alternative_titles,...",
-  "bytes_sent": 10982,
-  "cache": "MISS",
-  "method": "GET",
-  "proxy_host": "api.themoviedb.org",
-  "remote_addr": "172.18.0.4",
-  "rt": 0.267,
-  "status": 200,
-  "time": "2026-04-29T10:53:52+00:00",
-  "uct": "0.081",
-  "uht": "0.265",
-  "uri": "/3/tv/4259",
-  "urt": "0.267",
-  "user_agent": "Go-http-client/1.1"
-}
-```
-
-## Dependencies
-
-- `net-tmdb` — Internal Docker network.
-- Volumes: `tmdb_log`, `tmdb_cache`.
+The TEI cache remains on its native configuration in this first adoption. Its explicit treatment of inference response `no-store` needs separate compatibility work before using the shared cache contract.

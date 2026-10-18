@@ -15,7 +15,7 @@ All services are available on **port 8000**, routed by `Host` header:
 | `kafka-ui.127-0-0-1.sslip.io`         | `kafka-ui.lokal:8080`         | Kafka UI         |
 | `tei.127-0-0-1.sslip.io`              | `tei.lokal:8080`              | TEI              |
 | `tmdb-api.127-0-0-1.sslip.io`         | `tmdb.lokal:8080`             | TMDB API Proxy   |
-| `tmdb-files.127-0-0-1.sslip.io`       | `tmdb.lokal:9090`             | TMDB Files Proxy |
+| `tmdb-files.127-0-0-1.sslip.io`       | `tmdb-files.lokal:8080`       | TMDB Files Proxy |
 
 ## Health Check
 

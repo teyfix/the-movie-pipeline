@@ -1,0 +1,3 @@
+# CUE export snapshots, not mapping source.
+/services/pipeline/app/*.yaml
+/services/pipeline/app/out/

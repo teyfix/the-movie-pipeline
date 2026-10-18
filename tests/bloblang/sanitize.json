@@ -1,0 +1,7 @@
+{
+  "cases": [
+    { "name": "replace empty strings recursively while preserving other values", "expect": { "deleted": false, "output": { "missing": null, "nested": [{ "name": null, "adult": false, "count": 0 }, null, "text"], "overview": null } }, "request": { "input": { "missing": null, "nested": [{ "name": "", "adult": false, "count": 0 }, "", "text"], "overview": "" } } },
+    { "name": "keep JSON null distinct from message deletion", "expect": { "deleted": false, "output": null }, "request": { "input": null } }
+  ],
+  "mapping": "services/pipeline/app/normalize/mapping/sanitize.blobl"
+}

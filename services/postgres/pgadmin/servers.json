@@ -20,7 +20,7 @@
       "TunnelPort": "22",
       "TunnelPromptPassword": 0,
       "UseSSHTunnel": 0,
-      "Username": "supabase_admin"
+      "Username": "postgres"
     }
   }
 }

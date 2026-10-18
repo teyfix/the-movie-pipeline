@@ -1,0 +1,29 @@
+collector_name: tmdb
+metrics:
+  - metric_name: pg_custom_database_uptime_seconds
+    type: gauge
+    help: PostgreSQL uptime in seconds.
+    values: [seconds]
+    query: SELECT extract(EPOCH FROM (now() - pg_postmaster_start_time())) AS seconds
+  - metric_name: pg_custom_title_count
+    type: gauge
+    help: Number of titles per kind.
+    key_labels: [kind]
+    values: [count]
+    query: |
+      SELECT kind, count(*) AS count
+      FROM (
+        SELECT kind::text AS kind FROM tmdb.title
+        UNION ALL SELECT 'season' FROM tmdb.title_season
+        UNION ALL SELECT 'episode' FROM tmdb.title_episode
+      ) AS titles
+      GROUP BY kind
+  - metric_name: pg_custom_person_count
+    type: gauge
+    help: Number of people per department.
+    key_labels: [department]
+    values: [count]
+    query: |
+      SELECT coalesce(known_for_department, 'Unknown') AS department, count(*) AS count
+      FROM tmdb.person
+      GROUP BY known_for_department

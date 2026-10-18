@@ -13,13 +13,13 @@ scrape_configs:
 
   - job_name: postgres
     static_configs:
-      - targets: ["postgres-exporter.lokal:9187"]
+      - targets: ["postgres.lokal:9187", "postgres-sql.lokal:9399"]
     metrics_path: /metrics
     scrape_interval: 5s
 
   - job_name: pgbouncer
     static_configs:
-      - targets: ["pgbouncer-exporter.lokal:9127"]
+      - targets: ["pgbouncer.lokal:9127"]
     metrics_path: /metrics
     scrape_interval: 5s
 

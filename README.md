@@ -29,13 +29,13 @@ A Kafka-powered data pipeline that ingests [The Movie Database](https://www.them
 
 1. Get your API Read Access Token from [TMDB Profile](https://www.themoviedb.org/settings/api)
 
-2. Copy environment variables: `.env.example` → `.env`
+2. Copy environment variables: `.example.env` → `.env`
 
    ```bash
-   cp .env.example .env
+   cp .example.env .env
    ```
 
-3. Set [`TMDB_API_SECRET`](.env.example#L125) in `.env` to your TMDB API Read Access Token
+3. Set [`TMDB_API_SECRET`](.example.env) in `.env` to your TMDB API Read Access Token
 
 4. Start Docker services
 
@@ -126,25 +126,25 @@ Use the internal nginx reverse proxy on port `8000`:
 
 ## Core Services
 
-| Service            | Role                                                  | Compose Profile |
-| ------------------ | ----------------------------------------------------- | --------------- |
-| `seed`             | Downloads TMDB daily exports and publishes to Kafka   | —               |
-| `enrich`           | Fetches full TMDB API documents from export IDs       | —               |
-| `normalize`        | Flattens and sanitizes API responses                  | —               |
-| `ingest`           | Loads data into PostgreSQL via Bloblang mappings      | —               |
-| `embed`            | Generates text embeddings via TEI                     | `embed`         |
-| `sample`           | Generates JSON/TypeScript samples from Kafka topics   | `sample`        |
-| `redpanda`         | Kafka-compatible broker                               | —               |
-| `kafka-ui`         | Web UI for browsing Kafka topics                      | —               |
-| `redpanda-console` | Alternative Kafka web UI                              | `console`       |
-| `postgres`         | Primary database (Supabase image)                     | —               |
-| `pgbouncer`        | Transaction-level connection pooler                   | —               |
-| `pgadmin`          | Database management UI                                | —               |
-| `tmdb`             | Caching proxy for TMDB API and file exports           | —               |
-| `tei`              | Caching proxy for the embedding inference server      | —               |
-| `metrics`          | Prometheus, Grafana, Loki, Vector observability stack | —               |
-| `nginx`            | Internal HTTP reverse proxy (port 8000)               | —               |
-| `migrate`          | Drizzle ORM migration runner                          | —               |
+| Service            | Role                                                      | Compose Profile |
+| ------------------ | --------------------------------------------------------- | --------------- |
+| `seed`             | Downloads TMDB daily exports and publishes to Kafka       | —               |
+| `enrich`           | Fetches full TMDB API documents from export IDs           | —               |
+| `normalize`        | Flattens and sanitizes API responses                      | —               |
+| `ingest`           | Loads data into PostgreSQL via Bloblang mappings          | —               |
+| `embed`            | Generates text embeddings via TEI                         | `embed`         |
+| `sample`           | Generates JSON/TypeScript samples from Kafka topics       | `sample`        |
+| `redpanda`         | Kafka-compatible broker                                   | —               |
+| `kafka-ui`         | Web UI for browsing Kafka topics                          | —               |
+| `redpanda-console` | Alternative Kafka web UI                                  | `console`       |
+| `postgres`         | Shared PostgreSQL bundle with pooler and native exporters | —               |
+| `postgres-sql`     | Application SQL metrics after Drizzle migrations          | —               |
+| `pgadmin`          | Database management UI                                    | —               |
+| `tmdb`             | Caching proxy for TMDB API and file exports               | —               |
+| `tei`              | Caching proxy for the embedding inference server          | —               |
+| `metrics`          | Prometheus, Grafana, Loki, Vector observability stack     | —               |
+| `nginx`            | Internal HTTP reverse proxy (port 8000)                   | —               |
+| `migrate`          | Drizzle ORM migration runner                              | —               |
 
 ## Data Flow
 
@@ -159,7 +159,7 @@ Use the internal nginx reverse proxy on port `8000`:
 Common tasks are defined in `taskfile.yaml`:
 
 ```bash
-task migrate              # Generate and apply DB migrations
+task migrate              # Apply committed DB migrations
 task up -- <service>      # Start specific services
 task kcat -- <topic>      # Consume Kafka topic from beginning
 task rpk -- topic list    # List Kafka topics
@@ -188,6 +188,27 @@ Some services are heavy or diagnostic and are gated behind Docker Compose profil
 
 ## Development Tooling
 
-- `prettier.config.mjs` — Prettier configuration for SQL, YAML, JSON, and shell scripts.
+- `.prettierrc.yaml` — Prettier configuration for SQL, YAML, JSON, and shell scripts.
 - `package.json` — Root dev dependencies (prettier plugins, quicktype).
 - `.vscode/settings.json` — Pre-configured PostgreSQL/PgBouncer SQLTools connections.
+
+## Shared image adoption
+
+PostgreSQL/pooling/exporters and the TMDB API/files caches use published `teyfix/*` commit tags in Compose. See [PostgreSQL](services/postgres/README.md) and [TMDB caches](services/tmdb/README.md) for configuration, connection changes and state paths. The Vector/Connect engine wrappers, TEI proxy and observability collector remain consumer-owned in this first migration; their replacement needs its own render/reload and runtime verification.
+
+## Bloblang tooling
+
+Use [teyfix/bloblang](https://github.com/teyfix/bloblang)'s released `blobl` CLI (verified with v0.5.1). The [VS Code extension](https://marketplace.visualstudio.com/items?itemName=teyfix.vscode-bloblang) manages it and exposes it to new integrated terminals. For external terminals, use **Bloblang: Install CLI for External Terminals** or install the matching release archive on `PATH`; no Go build is required.
+
+```sh
+bun run bloblang:format
+bun run bloblang:check
+bun run bloblang:lint
+bun run bloblang:test
+```
+
+Formatting and linting target `services/pipeline/app`, including standalone mapping directories. `.bloblangignore` excludes root CUE export snapshots and generated `out/` configuration. Prettier owns host YAML/JSON; `blobl` owns Bloblang. The commands leave CUE rendering and native Connect validation as separate checks. Lint is static and does not use sample fixtures; `blobl run --sample <sample.yaml> <mapping.blobl>` evaluates a selected mapping without Kafka or PostgreSQL.
+
+Fixture definitions in `tests/bloblang` name the actual mapping source. The small test runner supplies that source to native `blobl test`, avoiding a second copy of the transformation. Current cases cover recursive sanitization, null versus deletion, provider collection unwrapping and preservation of the message envelope. The fixture workflow installs the released binary and runs these tests.
+
+Existing mappings currently have formatting drift and three `correctness/environment/require-fallback` warnings in embedding configuration. The check/lint commands report those normally; this adoption does not reformat or rewrite the existing mapping work, and they are not yet CI gates.

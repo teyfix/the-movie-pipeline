@@ -7,7 +7,7 @@ Manages the PostgreSQL schema using **Drizzle ORM** and **Drizzle Kit**.
 - **Runtime:** Bun
 - **ORM:** Drizzle ORM (`drizzle-orm`) with `pg-core`
 - **Validation:** `@sinclair/typebox` for JSON schema checks
-- **Dialect:** PostgreSQL (Supabase image)
+- **Dialect:** PostgreSQL (shared `teyfix/postgres` bundle)
 
 ## Schema Conventions
 
@@ -23,7 +23,7 @@ Manages the PostgreSQL schema using **Drizzle ORM** and **Drizzle Kit**.
 
 ## Extensions
 
-Initialized automatically via `services/postgres/postgres/tmdb/0000-init/`:
+Declared in `services/postgres/config/postgres.yaml` and provisioned before Drizzle:
 
 - `vector` (pgvector) — `halfvec(2048)` for embeddings.
 - `pgroonga` — Full-text search.
@@ -32,11 +32,13 @@ Initialized automatically via `services/postgres/postgres/tmdb/0000-init/`:
 ## Workflow
 
 ```bash
-task migrate     # generate + format + run
+task migrate     # apply committed migrations
 task migrate:gen # generate only
 ```
 
 Migrations are stored in `app/drizzle/<timestamp>_<name>/`. The `snapshot.json` file inside each migration directory is truncated in this repository to reduce file size.
+
+Compose starts the application SQL metrics service only after migration succeeds. Startup applies committed migrations without generating or formatting files in the mounted source tree; use `task migrate:gen` explicitly when changing the schema.
 
 ## Configuration
 

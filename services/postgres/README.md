@@ -1,58 +1,23 @@
-# PostgreSQL & Connection Pooling
+# PostgreSQL and pooling
 
-This directory contains the primary database, connection pooler, and admin tools.
+The published `teyfix/postgres` image runs PostgreSQL 17, PgBouncer, postgres-exporter and PgBouncer exporter in one supervised container. Compose selects the tested catalog revision; [the shared contract](https://github.com/teyfix/containers/blob/main/svc/postgres/README.md) owns its lifecycle and configuration schema.
 
-## Postgres (Supabase Image)
+`config/postgres.yaml` owns this project's `tmdb` database/application role, `tmdb` and `drizzle` schemas, grants/search paths and the vector, pgroonga, pg_jsonschema and pg_stat_statements extensions. Passwords come from `POSTGRES_PASSWORD` and `PG_PASSWORD`. If changing database/role/schema names, update this YAML and the matching `.env` connection settings together.
 
-Uses `supabase/postgres:17.6.1.072` for advanced extension support.
+The administrator is `postgres`; Supabase application bootstrap and its `supabase_admin` role are replaced. Drizzle remains the application schema owner in the separate `migrate` service, which connects directly as `postgres`. The pipeline uses `tmdb` through transaction pooling. Existing local `.env` files can retain obsolete image/pooler/admin variables: Compose constructs the new migration and ingestion URLs explicitly. When using the exported `POSTGRES_ADMIN_URL` or `POSTGRES_URL` elsewhere, update them to the new administrator and pooler port shown in `.example.env`.
 
-- **DB:** `tmdb`
-- **Superuser:** `supabase_admin` (required for init scripts)
-- **App user:** `tmdb`
-- **Schema:** `tmdb` (application), `drizzle` (migrations)
+| Interface               | Internal address                  |
+| ----------------------- | --------------------------------- |
+| PostgreSQL              | `postgres.lokal:5432`             |
+| PgBouncer               | `pgbouncer.lokal:6432`            |
+| PostgreSQL metrics      | `postgres.lokal:9187/metrics`     |
+| Pooler metrics          | `pgbouncer.lokal:9127/metrics`    |
+| Application SQL metrics | `postgres-sql.lokal:9399/metrics` |
 
-### Extensions
+The existing Traefik hostnames remain `pg.<base-domain>` and `pgbouncer.<base-domain>`. They now route to two ports on the `postgres` container. The image healthcheck covers provisioning, database access, pooling and successful native metric scrapes. Use `docker compose exec postgres ...` for both database and pooler diagnostics; the old separate `pgbouncer` and exporter services are gone.
 
-- `vector` (pgvector) — `halfvec` type for embeddings up to 2048 dims.
-- `pgroonga` — Fast full-text search.
-- `pg_jsonschema` — JSONB validation via `jsonb_matches_schema()`.
+`postgres-sql` uses native SQL Exporter and the consumer-owned `metrics/tmdb.collector.yaml`, preserving the dashboard's `pg_custom_*` metric names. It starts after Drizzle finishes, because its title/person queries require application tables. Enabling these collectors inside the database bundle while requiring database health before Drizzle would create a startup dependency cycle. Standard exporters use the bundle's restricted identities; application queries use the existing application role rather than the administrator.
 
-### Init Scripts
+Data and logs live under `.state/postgres/{data,logs,pooler-logs}`. Vector reads PostgreSQL JSON logs through a read-only bind mount. This image starts a fresh cluster; it does not import the former Supabase `pgdata` volume. The old named volumes are left intact. Rebuild disposable development state through normal provisioning and Drizzle, or explicitly export/import wanted data separately.
 
-On first boot, `tmdb.sh` executes sorted files in `postgres/tmdb/`:
-
-1. `0000-init/0000-lockdown.sql` — Revokes public schema privileges.
-2. `0000-init/0001-appuser.sql.gotpl` — Creates `tmdb` role, schemas, and default privileges.
-3. `0000-init/0002-extensions.sql.gotpl` — Creates extensions.
-
-## PgBouncer
-
-Transaction-level connection pooler.
-
-- **Pool mode:** `transaction`
-- **Default pool size:** 40
-- **Max client conn:** 1000
-- **Max DB conn:** 80
-- **Auth:** `scram-sha-256` via generated `userlist.txt`
-
-## pgAdmin
-
-Pre-configured with a `Development` server pointing to `postgres.lokal:5432`.
-
-## Exporters
-
-- **postgres-exporter** — Metrics on `:9187`, including custom queries for title/person counts.
-- **pgbouncer-exporter** — Pool metrics on `:9127`.
-
-## Access
-
-| Method                 | Address                                  |
-| ---------------------- | ---------------------------------------- |
-| Internal (Docker)      | `postgres.lokal:5432`                    |
-| Internal (PgBouncer)   | `pgbouncer.lokal:5432`                   |
-| External (Traefik TLS) | `pg.tmdb.127-0-0-1.sslip.io:4040`        |
-| External (Traefik TLS) | `pgbouncer.tmdb.127-0-0-1.sslip.io:4040` |
-
-## Alternative Gateway
-
-For HTTP services in this stack, you can also use [teyfix/traefik](https://github.com/teyfix/traefik) or the internal nginx proxy at `http://{service-name}.127-0-0-1.sslip.io:8000`. Note that PostgreSQL is a TCP service and requires Traefik for external TLS access.
+`docker compose down -v` does not delete `.state` bind mounts. For a database reset, stop this project's services, explicitly remove its `.state/postgres/data`, then start again. Preserve `.cache/` and unrelated state.

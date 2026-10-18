@@ -151,8 +151,6 @@ services:
     entrypoint: /bin/sh
     user: root
     command: /app/entrypoint.sh
-    environment:
-      POSTGRES_URL: ${POSTGRES_URL:?}
     volumes:
       - ${PWD}/services/metrics/vector:/app:ro
       # Persistence
@@ -160,12 +158,12 @@ services:
       # Log exporter – Docker
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Log exporter – File
-      - pglogs:/mnt/log/postgres:ro
+      - ${PWD}/.state/postgres/logs:/mnt/log/postgres:ro
       - tei_log:/mnt/log/tei:ro
-      - tmdb_log:/mnt/log/tmdb:ro
+      - ${PWD}/.state/tmdb:/mnt/log/tmdb:ro
       # Storage exporter – Executing `du -s` requires root
       - tei_cache:/mnt/cache/tei:ro
-      - tmdb_cache:/mnt/cache/tmdb:ro
+      - ${PWD}/.cache/tmdb:/mnt/cache/tmdb:ro
     networks:
       net-loki:
       net-vector: { aliases: [vector.lokal] }

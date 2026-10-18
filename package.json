@@ -1,6 +1,12 @@
 {
   "name": "the-movie-pipeline",
   "type": "module",
+  "scripts": {
+    "bloblang:check": "blobl fmt --check services/pipeline/app",
+    "bloblang:format": "blobl fmt --write services/pipeline/app",
+    "bloblang:lint": "blobl lint services/pipeline/app",
+    "bloblang:test": "python3 scripts/test-bloblang.py"
+  },
   "devDependencies": {
     "prettier": "^3.8.3",
     "prettier-plugin-embed": "^0.5.1",

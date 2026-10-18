@@ -114,8 +114,6 @@ export: "enrich/resources": {
 											http: {
 												url:  #"${TMDB_API_URL}${! meta("endpoint") }"#
 												verb: "GET"
-												headers:
-													Authorization: "Bearer ${TMDB_API_SECRET}"
 												retries: 3
 												successful_on: [200]
 												drop_on: [404]

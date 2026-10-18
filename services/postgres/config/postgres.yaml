@@ -1,0 +1,59 @@
+postgres:
+  password: { from_env: POSTGRES_PASSWORD }
+  roles:
+    - name: tmdb
+      login: true
+      password: { from_env: PG_PASSWORD }
+  databases:
+    - name: tmdb
+      connect: [tmdb]
+      public_schema:
+        usage: true
+        create: false
+      schemas:
+        - name: tmdb
+          owner: tmdb
+          grants:
+            - role: tmdb
+              schema: [USAGE, CREATE]
+              tables: [ALL]
+              sequences: [ALL]
+              functions: [ALL]
+              creators: [postgres, tmdb]
+        - name: drizzle
+          owner: tmdb
+          grants:
+            - role: tmdb
+              schema: [USAGE, CREATE]
+              tables: [ALL]
+              sequences: [ALL]
+              functions: [ALL]
+              creators: [postgres, tmdb]
+      search_paths:
+        - role: tmdb
+          schemas: [tmdb, drizzle, public]
+      extensions:
+        - name: vector
+          schema: public
+        - name: pgroonga
+          schema: tmdb
+        - name: pg_jsonschema
+          schema: tmdb
+        - name: pg_stat_statements
+          schema: public
+pooler:
+  enabled: true
+  mode: transaction
+  max_client_connections: 1000
+  default_pool_size: 40
+  max_db_connections: 80
+  reserve_pool_size: 10
+  reserve_pool_timeout: 3
+  query_wait_timeout: 30
+  server_connect_timeout: 5
+  server_idle_timeout: 30
+  metrics:
+    enabled: true
+metrics:
+  enabled: true
+  database: tmdb

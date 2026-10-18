@@ -6,13 +6,13 @@ The published `teyfix/postgres` image runs PostgreSQL 17, PgBouncer, postgres-ex
 
 The administrator is `postgres`; Supabase application bootstrap and its `supabase_admin` role are replaced. Drizzle remains the application schema owner in the separate `migrate` service, which connects directly as `postgres`. The pipeline uses `tmdb` through transaction pooling. Existing local `.env` files can retain obsolete image/pooler/admin variables: Compose constructs the new migration and ingestion URLs explicitly. When using the exported `POSTGRES_ADMIN_URL` or `POSTGRES_URL` elsewhere, update them to the new administrator and pooler port shown in `.example.env`.
 
-| Interface               | Internal address                  |
-| ----------------------- | --------------------------------- |
-| PostgreSQL              | `postgres.lokal:5432`             |
-| PgBouncer               | `pgbouncer.lokal:6432`            |
-| PostgreSQL metrics      | `postgres.lokal:9187/metrics`     |
-| Pooler metrics          | `pgbouncer.lokal:9127/metrics`    |
-| Application SQL metrics | `postgres-sql.lokal:9399/metrics` |
+|Interface|Internal address|
+|-|-|
+|PostgreSQL|`postgres.lokal:5432`|
+|PgBouncer|`pgbouncer.lokal:6432`|
+|PostgreSQL metrics|`postgres.lokal:9187/metrics`|
+|Pooler metrics|`pgbouncer.lokal:9127/metrics`|
+|Application SQL metrics|`postgres-sql.lokal:9399/metrics`|
 
 The existing Traefik hostnames remain `pg.<base-domain>` and `pgbouncer.<base-domain>`. They now route to two ports on the `postgres` container. The image healthcheck covers provisioning, database access, pooling and successful native metric scrapes. Use `docker compose exec postgres ...` for both database and pooler diagnostics; the old separate `pgbouncer` and exporter services are gone.
 

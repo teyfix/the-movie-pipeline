@@ -35,6 +35,7 @@ plugins:
   - prettier-plugin-sql
   - prettier-plugin-sort-json
   - prettier-plugin-packagejson
+  - prettier-plugin-compact-markdown-table
 printWidth: 8000
 objectWrap: collapse
 overrides:

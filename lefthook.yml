@@ -1,0 +1,9 @@
+glob_matcher: doublestar
+pre-commit:
+  jobs:
+    - name: prettier
+      glob:
+        - "**/*.{json,jsonc,json5,yaml,yml,md,mdx,sh,bash,zsh,sql}"
+        - "**/.example.env"
+      run: bun run prettier --write --ignore-unknown -- {staged_files}
+      stage_fixed: true

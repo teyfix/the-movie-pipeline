@@ -5,10 +5,15 @@
     "bloblang:check": "blobl fmt --check services/pipeline/app",
     "bloblang:format": "blobl fmt --write services/pipeline/app",
     "bloblang:lint": "blobl lint services/pipeline/app",
-    "bloblang:test": "python3 scripts/test-bloblang.py"
+    "bloblang:test": "python3 scripts/test-bloblang.py",
+    "format": "prettier --write --ignore-unknown '*.{json,yaml,yml,md}' .prettierrc.yaml '{.github,.vscode,services,scripts,tests}/**/*.{json,jsonc,json5,yaml,yml,md,mdx,sh,bash,zsh,sql}'",
+    "format:check": "prettier --check --ignore-unknown '*.{json,yaml,yml,md}' .prettierrc.yaml '{.github,.vscode,services,scripts,tests}/**/*.{json,jsonc,json5,yaml,yml,md,mdx,sh,bash,zsh,sql}'",
+    "prepare": "lefthook install"
   },
   "devDependencies": {
+    "lefthook": "2.2.2",
     "prettier": "^3.8.3",
+    "prettier-plugin-compact-markdown-table": "^0.1.0",
     "prettier-plugin-embed": "^0.5.1",
     "prettier-plugin-packagejson": "^3.0.2",
     "prettier-plugin-sh": "^0.18.1",

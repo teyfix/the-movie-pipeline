@@ -6,16 +6,16 @@ A lightweight **nginx** gateway that exposes HTTP services when you do **not** w
 
 All services are available on **port 8000**, routed by `Host` header:
 
-| Subdomain                             | Upstream                      | Service          |
-| ------------------------------------- | ----------------------------- | ---------------- |
-| `prometheus.127-0-0-1.sslip.io`       | `prometheus.lokal:9090`       | Prometheus       |
-| `grafana.127-0-0-1.sslip.io`          | `grafana.lokal:3000`          | Grafana          |
-| `pgadmin.127-0-0-1.sslip.io`          | `pgadmin.lokal:80`            | pgAdmin          |
-| `redpanda-console.127-0-0-1.sslip.io` | `redpanda-console.lokal:8080` | Redpanda Console |
-| `kafka-ui.127-0-0-1.sslip.io`         | `kafka-ui.lokal:8080`         | Kafka UI         |
-| `tei.127-0-0-1.sslip.io`              | `tei.lokal:8080`              | TEI              |
-| `tmdb-api.127-0-0-1.sslip.io`         | `tmdb.lokal:8080`             | TMDB API Proxy   |
-| `tmdb-files.127-0-0-1.sslip.io`       | `tmdb-files.lokal:8080`       | TMDB Files Proxy |
+|Subdomain|Upstream|Service|
+|-|-|-|
+|`prometheus.127-0-0-1.sslip.io`|`prometheus.lokal:9090`|Prometheus|
+|`grafana.127-0-0-1.sslip.io`|`grafana.lokal:3000`|Grafana|
+|`pgadmin.127-0-0-1.sslip.io`|`pgadmin.lokal:80`|pgAdmin|
+|`redpanda-console.127-0-0-1.sslip.io`|`redpanda-console.lokal:8080`|Redpanda Console|
+|`kafka-ui.127-0-0-1.sslip.io`|`kafka-ui.lokal:8080`|Kafka UI|
+|`tei.127-0-0-1.sslip.io`|`tei.lokal:8080`|TEI|
+|`tmdb-api.127-0-0-1.sslip.io`|`tmdb.lokal:8080`|TMDB API Proxy|
+|`tmdb-files.127-0-0-1.sslip.io`|`tmdb-files.lokal:8080`|TMDB Files Proxy|
 
 ## Health Check
 

@@ -2,10 +2,10 @@
 
 Two instances of the published `teyfix/cache-proxy` image replace the native NGINX configuration. Compose selects a tested catalog revision; [the shared contract](https://github.com/teyfix/containers/blob/main/svc/cache-proxy/README.md) owns rendering, validation, readiness and log fields.
 
-| Service      | Internal URL                   | Configuration       | Upstream                     |
-| ------------ | ------------------------------ | ------------------- | ---------------------------- |
-| `tmdb`       | `http://tmdb.lokal:8080`       | `config/api.yaml`   | `https://api.themoviedb.org` |
-| `tmdb-files` | `http://tmdb-files.lokal:8080` | `config/files.yaml` | `https://files.tmdb.org`     |
+|Service|Internal URL|Configuration|Upstream|
+|-|-|-|-|
+|`tmdb`|`http://tmdb.lokal:8080`|`config/api.yaml`|`https://api.themoviedb.org`|
+|`tmdb-files`|`http://tmdb-files.lokal:8080`|`config/files.yaml`|`https://files.tmdb.org`|
 
 The existing Traefik `api.<base-domain>`/`files.<base-domain>` and fallback NGINX hostnames remain available. Seed now uses the files service on 8080 instead of `tmdb.lokal:9090`. The `enrich` CUE configuration calls the API cache without a caller Authorization header: the cache adds the configured `TMDB_API_SECRET` as the upstream Bearer credential. This explicitly permits shared caching of TMDB's public catalog responses. Incoming caller Authorization/Cookie headers still trigger the image's cache bypass.
 

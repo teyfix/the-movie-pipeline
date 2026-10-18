@@ -126,25 +126,25 @@ Use the internal nginx reverse proxy on port `8000`:
 
 ## Core Services
 
-| Service            | Role                                                      | Compose Profile |
-| ------------------ | --------------------------------------------------------- | --------------- |
-| `seed`             | Downloads TMDB daily exports and publishes to Kafka       | —               |
-| `enrich`           | Fetches full TMDB API documents from export IDs           | —               |
-| `normalize`        | Flattens and sanitizes API responses                      | —               |
-| `ingest`           | Loads data into PostgreSQL via Bloblang mappings          | —               |
-| `embed`            | Generates text embeddings via TEI                         | `embed`         |
-| `sample`           | Generates JSON/TypeScript samples from Kafka topics       | `sample`        |
-| `redpanda`         | Kafka-compatible broker                                   | —               |
-| `kafka-ui`         | Web UI for browsing Kafka topics                          | —               |
-| `redpanda-console` | Alternative Kafka web UI                                  | `console`       |
-| `postgres`         | Shared PostgreSQL bundle with pooler and native exporters | —               |
-| `postgres-sql`     | Application SQL metrics after Drizzle migrations          | —               |
-| `pgadmin`          | Database management UI                                    | —               |
-| `tmdb`             | Caching proxy for TMDB API and file exports               | —               |
-| `tei`              | Caching proxy for the embedding inference server          | —               |
-| `metrics`          | Prometheus, Grafana, Loki, Vector observability stack     | —               |
-| `nginx`            | Internal HTTP reverse proxy (port 8000)                   | —               |
-| `migrate`          | Drizzle ORM migration runner                              | —               |
+|Service|Role|Compose Profile|
+|-|-|-|
+|`seed`|Downloads TMDB daily exports and publishes to Kafka|—|
+|`enrich`|Fetches full TMDB API documents from export IDs|—|
+|`normalize`|Flattens and sanitizes API responses|—|
+|`ingest`|Loads data into PostgreSQL via Bloblang mappings|—|
+|`embed`|Generates text embeddings via TEI|`embed`|
+|`sample`|Generates JSON/TypeScript samples from Kafka topics|`sample`|
+|`redpanda`|Kafka-compatible broker|—|
+|`kafka-ui`|Web UI for browsing Kafka topics|—|
+|`redpanda-console`|Alternative Kafka web UI|`console`|
+|`postgres`|Shared PostgreSQL bundle with pooler and native exporters|—|
+|`postgres-sql`|Application SQL metrics after Drizzle migrations|—|
+|`pgadmin`|Database management UI|—|
+|`tmdb`|Caching proxy for TMDB API and file exports|—|
+|`tei`|Caching proxy for the embedding inference server|—|
+|`metrics`|Prometheus, Grafana, Loki, Vector observability stack|—|
+|`nginx`|Internal HTTP reverse proxy (port 8000)|—|
+|`migrate`|Drizzle ORM migration runner|—|
 
 ## Data Flow
 
@@ -191,6 +191,8 @@ Some services are heavy or diagnostic and are gated behind Docker Compose profil
 - `.prettierrc.yaml` — Prettier configuration for SQL, YAML, JSON, and shell scripts.
 - `package.json` — Root dev dependencies (prettier plugins, quicktype).
 - `.vscode/settings.json` — Pre-configured PostgreSQL/PgBouncer SQLTools connections.
+
+`bun install` installs the Lefthook pre-commit hook. It runs Prettier on supported staged files and stages its formatting fixes, including compact Markdown tables through `prettier-plugin-compact-markdown-table`. Use `bun run format` or `bun run format:check` for source-wide formatting. Generated CUE exports, caches/state, dependencies, secrets and native templates are excluded; Bloblang uses the separate commands below. CUE and Python are outside Prettier's coverage.
 
 ## Shared image adoption
 

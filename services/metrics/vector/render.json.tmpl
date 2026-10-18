@@ -1,0 +1,8 @@
+{
+  "docker.yaml": {{ datasource "docker" | data.ToJSON }},
+  "pipeline.yaml": {{ datasource "pipeline" | data.ToJSON }},
+  "postgres.yaml": {{ datasource "postgres" | data.ToJSON }},
+  "vector.yaml": {{ datasource "vector" | data.ToJSON }},
+  "nginx.yaml": {{ tmpl.Exec "nginx" . | data.YAML | data.ToJSON }},
+  "storage.yaml": {{ tmpl.Exec "storage" . | data.YAML | data.ToJSON }}
+}

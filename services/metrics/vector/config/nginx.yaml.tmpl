@@ -38,9 +38,9 @@ transforms:
   #
   # Example raw log:
   #   {
-  #     "urt": "5000, 5000, 458",   # upstream response time per attempt (ms)
-  #     "uct": "-, -, 293",         # upstream connect time per attempt (ms)
-  #     "uht": "-, -, 328"          # upstream header time per attempt (ms)
+  #     "urt": "5.000, 5.000, 0.458",   # upstream response time per attempt (seconds)
+  #     "uct": "-, -, 0.293",         # upstream connect time per attempt (seconds)
+  #     "uht": "-, -, 0.328"          # upstream header time per attempt (seconds)
   #   }
   #
   # Meaning:
@@ -59,17 +59,17 @@ transforms:
         - nginx_mark_{{ .name }}
       {{- end }}
     source: |
-      . = map_values(split(string!(.json.urt), ", ")) -> |_| {
+      attempts = []
+      for_each(split(string!(.json.urt), ", ")) -> |idx, _| {
         item = merge!(.json, .meta)
-
         for_each(["urt", "uct", "uht"]) -> |_, prop| {
-          for_each(split(string!(get!(.json, [prop])), ", ")) -> |idx, value| {
-            item = merge(item, object_from_array([[prop, value]]))
-          }
+          timings = split(string!(get!(.json, [prop])), ", ")
+          item = set!(item, [prop], get(timings, [idx]) ?? "-")
         }
-
-        item
+        attempts = push(attempts, item)
       }
+      . = attempts
+
 
   # ---------------------------------------------------------------------------
   # nginx_parse_access: Normalize string values to typed values

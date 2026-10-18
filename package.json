@@ -8,6 +8,7 @@
     "bloblang:test": "python3 scripts/test-bloblang.py",
     "format": "prettier --write --ignore-unknown '*.{json,yaml,yml,md}' .prettierrc.yaml '{.github,.vscode,services,scripts,tests}/**/*.{json,jsonc,json5,yaml,yml,md,mdx,sh,bash,zsh,sql}'",
     "format:check": "prettier --check --ignore-unknown '*.{json,yaml,yml,md}' .prettierrc.yaml '{.github,.vscode,services,scripts,tests}/**/*.{json,jsonc,json5,yaml,yml,md,mdx,sh,bash,zsh,sql}'",
+    "observability:check": "python3 scripts/check-observability.py",
     "pipeline:check": "bash scripts/check-pipeline.sh",
     "prepare": "lefthook install"
   },

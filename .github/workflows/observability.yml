@@ -1,0 +1,43 @@
+name: TEI proxy and observability
+
+on:
+  pull_request:
+    paths:
+      - services/tei/**
+      - services/metrics/**
+      - scripts/check-observability.py
+      - .example.env
+      - docker-compose.yaml
+      - .github/workflows/observability.yml
+  push:
+    branches: [main]
+    paths:
+      - services/tei/**
+      - services/metrics/**
+      - scripts/check-observability.py
+      - .example.env
+      - docker-compose.yaml
+      - .github/workflows/observability.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Configure development inputs
+        run: |
+          cp .example.env .env
+          docker network create traefik_proxy
+      - name: Verify TEI caching and collector lifecycle with real Loki
+        run: python3 scripts/check-observability.py
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: observability-diagnostics
+          path: .state/observability-tests/**/compose.log

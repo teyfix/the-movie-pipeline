@@ -79,7 +79,7 @@ def main():
   parent = root / ".state/observability-tests"
   parent.mkdir(parents=True, exist_ok=True)
   work = Path(tempfile.mkdtemp(prefix="run-", dir=parent))
-  project = "tmdb-observability-" + work.name.removeprefix("run-")
+  project = "tmdb-observability-" + work.name.removeprefix("run-").replace("_", "x")
   origin = project + "-origin"
   source = work / "collector"
   shutil.copytree(root / "services/metrics/vector", source)

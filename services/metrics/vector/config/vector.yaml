@@ -27,6 +27,7 @@ sinks:
       - enrich_docker
       - enrich_nginx
       - enrich_postgres
+      - enrich_pipeline
     endpoint: http://loki.lokal:3100
     encoding:
       codec: json

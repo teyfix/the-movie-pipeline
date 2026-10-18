@@ -8,47 +8,28 @@ x-healthcheck: &healthcheck
 x-pipeline: &pipeline
   build:
     context: ${PWD}/services/pipeline
-    args:
-      ALPINE_IMAGE: ${ALPINE_IMAGE:?}
-      CUE_IMAGE: ${CUE_IMAGE:?}
-      RD_CONNECT_IMAGE: ${RD_CONNECT_IMAGE:?}
-      REDPANDA_IMAGE: ${REDPANDA_IMAGE:?}
-      VECTOR_IMAGE: ${VECTOR_IMAGE:?}
-  entrypoint: /bin/bash
-  command: /app/entrypoint.sh
-  user: root
+    target: connect
+  working_dir: /app
   volumes:
     - ${PWD}/services/pipeline/app:/app:ro
-
-  tmpfs:
-    - /config
-    - /home/pipeline
+    - ${PWD}/services/pipeline/config:/config:ro
 
 x-common-env: &common-env
   KAFKA_BROKERS: ${KAFKA_BROKERS:?}
-
-x-vector-env: &vector-env
-  <<: *common-env
-  EXEC_CMD: vector -w -c "$$CONFIGDIR_TARGET/vector/*.yaml" -c "$$CONFIGDIR_TARGET/$$SERVICE_NAME/**/*.yaml"
-
-x-connect-env: &connect-env
-  <<: *common-env
-  EXEC_CMD: redpanda-connect streams -o $$CONFIGDIR_TARGET/connect/observability.yaml -r $$CONFIGDIR_TARGET/connect/resources.yaml -w $$CONFIGDIR_TARGET/$$SERVICE_NAME/**/*.yaml
-
-volumes:
-  seed_tmdb:
-  seed_vector:
 
 networks:
   net-pipeline:
 
 services:
   kafka-init:
-    <<: *pipeline
+    build:
+      context: ${PWD}/services/pipeline
+      target: kafka-init
+    volumes:
+      - ${PWD}/services/pipeline/app:/app:ro
     restart: on-failure
     environment:
       <<: *common-env
-      EXEC_CMD: /app/kafka/entrypoint.sh
       KAFKA_CLEANUP_POLICY: ${KAFKA_CLEANUP_POLICY:?}
       KAFKA_COMPRESSION_TYPE: ${KAFKA_COMPRESSION_TYPE:?}
       KAFKA_MAX_MESSAGE_BYTES: ${KAFKA_MAX_MESSAGE_BYTES:?}
@@ -68,18 +49,22 @@ services:
 
   seed:
     <<: *pipeline
+    build:
+      context: ${PWD}/services/pipeline
+      target: seed
     restart: unless-stopped
     environment:
-      <<: *vector-env
-      SERVICE_NAME: seed
-      DATADIR_TMDB: ${DATADIR_TMDB:?}
-      DATADIR_VECTOR: ${DATADIR_VECTOR:?}
+      <<: *common-env
+      PIPELINE_CONFIG: /config/seed.yaml
+      VECTOR_DANGEROUSLY_ALLOW_ENV_VAR_INTERPOLATION: "true"
+      DATADIR_TMDB: /downloads
       TMDB_FILES_API_URL: http://tmdb-files.lokal:8080
-      TMDB_DOWNLOAD_INTERVAL_SECS: 3600
     volumes:
-      - seed_tmdb:${DATADIR_TMDB:?}
-      - seed_vector:${DATADIR_VECTOR:?}
       - ${PWD}/services/pipeline/app:/app:ro
+      - ${PWD}/services/pipeline/config:/config:ro
+      - ${PWD}/.cache/tmdb/exports:/downloads
+      - ${PWD}/.state/pipeline/data/seed:/data
+      - ${PWD}/.state/pipeline/logs/seed:/var/log/vector
     networks:
       net-kafka:
       net-pipeline: { aliases: [seed.lokal] }
@@ -98,14 +83,19 @@ services:
       - "tmdb.log.enable=true"
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:8686/health]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]
 
   enrich:
     <<: *pipeline
+    volumes:
+      - ${PWD}/services/pipeline/app:/app:ro
+      - ${PWD}/services/pipeline/config:/config:ro
+      - ${PWD}/.state/pipeline/data/enrich:/data
+      - ${PWD}/.state/pipeline/logs/enrich:/var/log/redpanda-connect
     restart: unless-stopped
     environment:
-      <<: *connect-env
-      SERVICE_NAME: enrich
+      <<: *common-env
+      PIPELINE_CONFIG: /config/enrich.yaml
       TMDB_API_URL: http://tmdb.lokal:8080
     networks:
       net-kafka:
@@ -125,14 +115,19 @@ services:
       - "tmdb.log.enable=true"
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]
 
   normalize:
     <<: *pipeline
+    volumes:
+      - ${PWD}/services/pipeline/app:/app:ro
+      - ${PWD}/services/pipeline/config:/config:ro
+      - ${PWD}/.state/pipeline/data/normalize:/data
+      - ${PWD}/.state/pipeline/logs/normalize:/var/log/redpanda-connect
     restart: unless-stopped
     environment:
-      <<: *connect-env
-      SERVICE_NAME: normalize
+      <<: *common-env
+      PIPELINE_CONFIG: /config/normalize.yaml
     networks:
       net-kafka:
       net-pipeline: { aliases: [normalize.lokal] }
@@ -149,14 +144,19 @@ services:
       - "tmdb.log.enable=true"
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]
 
   embed:
     <<: *pipeline
+    volumes:
+      - ${PWD}/services/pipeline/app:/app:ro
+      - ${PWD}/services/pipeline/config:/config:ro
+      - ${PWD}/.state/pipeline/data/embed:/data
+      - ${PWD}/.state/pipeline/logs/embed:/var/log/redpanda-connect
     restart: unless-stopped
     environment:
-      <<: *connect-env
-      SERVICE_NAME: embed
+      <<: *common-env
+      PIPELINE_CONFIG: /config/embed.yaml
       TEI_API_URL: http://tei.lokal:8080
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:?}
@@ -178,16 +178,21 @@ services:
       - "tmdb.log.enable=true"
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]
     profiles:
       - embed
 
   ingest:
     <<: *pipeline
+    volumes:
+      - ${PWD}/services/pipeline/app:/app:ro
+      - ${PWD}/services/pipeline/config:/config:ro
+      - ${PWD}/.state/pipeline/data/ingest:/data
+      - ${PWD}/.state/pipeline/logs/ingest:/var/log/redpanda-connect
     restart: unless-stopped
     environment:
-      <<: *connect-env
-      SERVICE_NAME: ingest
+      <<: *common-env
+      PIPELINE_CONFIG: /config/ingest.yaml
       PG_SCHEMA: ${PG_SCHEMA:?}
       POSTGRES_URL: postgresql://${PG_USER:?}:${PG_PASSWORD:?}@pgbouncer.lokal:6432/${POSTGRES_DB:?}?sslmode=disable
       INGEST_MAX_IN_FLIGHT: ${INGEST_MAX_IN_FLIGHT:?}
@@ -214,4 +219,4 @@ services:
       - "tmdb.log.enable=true"
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:4195/ready]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]

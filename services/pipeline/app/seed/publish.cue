@@ -1,5 +1,7 @@
 package seed
 
+import "strings"
+
 import "pipelines.lokal/shared/tmdb"
 
 export: "seed/publish": {
@@ -8,7 +10,7 @@ export: "seed/publish": {
 			"tmdb_file_\(name)": {
 				type: "file"
 				include: [for prefix in resource.download.prefix {
-					"${DATADIR_TMDB:?}/\(prefix)_ids_*.json.gz"
+					"${DATADIR_TMDB}/\(prefix)_ids_*.json.gz"
 				}]
 				ignore_checkpoints: true
 			}
@@ -29,6 +31,7 @@ export: "seed/publish": {
 					      "v": 1,
 					      "ts": now(),
 					      "topic": "\(resource.topic.export)",
+					      "topic_suffix": "\(strings.TrimPrefix(resource.topic.export, tmdb.nsp+"."))",
 					    }
 					  }
 					"""
@@ -39,8 +42,8 @@ export: "seed/publish": {
 		tmdb_publish_redpanda: {
 			type: "kafka"
 			inputs: ["tmdb_envelope_*"]
-			bootstrap_servers: "${KAFKA_BROKERS:?}"
-			topic:             "{{ meta.topic }}"
+			bootstrap_servers: "${KAFKA_BROKERS}"
+			topic:             "\(tmdb.nsp).{{ meta.topic_suffix }}"
 			key_field:         "data.id"
 			encoding: {
 				codec: "json"

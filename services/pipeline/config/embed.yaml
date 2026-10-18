@@ -1,0 +1,7 @@
+source: /app
+watch: [/app]
+http:
+  bind: 0.0.0.0
+render:
+  command: [cue, export, ./runtime, -t, service=embed, -e, files, --out, json]
+  timeout_seconds: 60

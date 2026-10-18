@@ -10,14 +10,14 @@ export: "seed/download": {
 					type: "exec"
 					mode: "scheduled"
 					scheduled: {
-						exec_interval_secs: "${TMDB_DOWNLOAD_INTERVAL_SECS:?}"
+						exec_interval_secs: 3600
 					}
 					command: ["bash", "seed/scripts/download.sh"]
 					environment: {
 						KIND:               resource.kind
 						PREFIX:             prefix
-						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL:?}"
-						TMDB_DOWNLOAD_DIR:  "${DATADIR_TMDB:?}"
+						TMDB_FILES_API_URL: "${TMDB_FILES_API_URL}"
+						TMDB_DOWNLOAD_DIR:  "${DATADIR_TMDB}"
 					}
 					decoding: {
 						codec: "json"

@@ -1,15 +1,6 @@
 package connect
 
 export: "connect/observability": {
-	http: {
-		enabled: true
-		address: "0.0.0.0:4195"
-	}
-
-	logger: {
-		format: "json"
-	}
-
 	metrics: {
 		prometheus: {
 			use_histogram_timing: true

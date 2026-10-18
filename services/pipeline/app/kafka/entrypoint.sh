@@ -15,7 +15,9 @@ info() {
   log_entry "info" "kafka-init" "$@"
 }
 
-CONFIG_FILE="$CONFIGDIR_TARGET/values/tmdb.yaml"
+CONFIG_FILE=$(mktemp /run/tmdb-topics.XXXXXX)
+trap 'rm -f "$CONFIG_FILE"' EXIT
+cue export ./shared/tmdb -e 'export["values/tmdb"]' --out yaml > "$CONFIG_FILE"
 BOOTSTRAP_SERVERS=${KAFKA_BROKERS}
 
 # Topic settings
@@ -29,7 +31,7 @@ SMALL_SEGMENT_BYTES=16777216  # 16MB for small topics (export, embeddings, etc.)
 LARGE_SEGMENT_BYTES=536870912 # 512MB for large topics (detail, normalized, etc.)
 
 # Extract topics from config
-TOPICS=($(yq e '.resources[].topic[]' "$CONFIG_FILE"))
+mapfile -t TOPICS < <(yq -r '.resources[].topic[]' "$CONFIG_FILE" | sort -u)
 
 if [[ -z "${TOPICS[*]:-}" ]]; then
   info "No topics found in $CONFIG_FILE"
@@ -38,8 +40,7 @@ fi
 
 info "Fetching topic cache from Redpanda..."
 # Cache the topic details locally to avoid redundant network/API calls.
-# We default to an empty JSON array '[]' in case there are no topics yet.
-TOPIC_CACHE=$(rpk topic list --brokers "$BOOTSTRAP_SERVERS" --format json 2> /dev/null || echo "[]")
+TOPIC_CACHE=$(rpk topic list --brokers "$BOOTSTRAP_SERVERS" --format json)
 
 # Function to manage a single topic
 manage_topic() {

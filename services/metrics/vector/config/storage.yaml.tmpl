@@ -7,7 +7,7 @@ sources:
     mode: scheduled
     scheduled:
       exec_interval_secs: 60
-    command: [sh, /tmp/config/storage.sh]
+    command: [sh, /app/config/storage.sh]
     environment:
       STORAGE_NAME: "{{ $res.name }}"
       STORAGE_PATH: "{{ $res.path }}"

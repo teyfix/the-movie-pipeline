@@ -8,3 +8,4 @@ node_modules/
 **/*.gotpl
 services/pipeline/app/*.yaml
 services/pipeline/app/out/
+**/*.tmpl

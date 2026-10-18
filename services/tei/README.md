@@ -1,65 +1,21 @@
-# Text Embeddings Inference (TEI)
+# TEI cache
 
-Provides cached vector embeddings via a HuggingFace TEI server fronted by nginx.
+The inference server remains the official TEI image with its existing NVIDIA reservation; there is no automatic CPU fallback in this Compose configuration. `EMBEDDING_MODEL` and `EMBEDDING_DIMENSIONS` select the consumer model/embedding contract. The `tei` proxy uses published `teyfix/cache-proxy` and mounts the `tei-routes` Compose config. Compose substitutes `EMBEDDING_MODEL` into its cache namespace, so changing models and recreating the proxy cannot reuse the previous model's results. No consumer NGINX template remains.
 
-## Architecture
+Only the read-only `POST /embed` endpoint is cached. The shared key hashes the complete buffered request body and includes method, content type, request URI and model/configuration identity. Successes stay fresh for one day, inactive entries expire after 30 days, and responses use a 1 GiB cache. Concurrent fills use a 30-second native cache lock. Expired results can be served on upstream errors/timeouts/5xx. Other endpoints, including `/health` and `/metrics`, pass through uncached. `/healthz` is the proxy's local readiness endpoint; it does not assert inference readiness.
 
-- **`tei-server`** — Runs `ghcr.io/huggingface/text-embeddings-inference:1.9.2`.
-  - Model: `BAAI/bge-large-en-v1.5`
-  - Dimensions: `1024` (max padded to `2048`)
-  - GPU reservations enabled in Compose (falls back to CPU if unavailable).
-- **`tei`** — Nginx caching reverse proxy.
+Client Authorization/Cookie and explicit cache-bypass requests bypass reads and writes. Private/no-store/no-cache and Set-Cookie responses are not stored, including with a TTL override. The removed legacy template claimed TEI always sends `no-store`; the pinned v1.9.2 HTTP router source does not establish that claim. The shared privacy policy remains in force; an upstream that adds those directives will be called for each request.
 
-## Caching Strategy
+Models persist in `.cache/tei/models` at the inference server's `/data`, and responses persist in `.cache/tei/responses` at the proxy's `/var/cache/nginx`. Proxy JSON access logs and native text errors live in `.state/tei/logs`. The collector reads the JSON access log for TEI request/cache metrics and Loki delivery. Health checks are excluded from proxy access logs.
 
-TEI's `/embed` endpoint is `POST`-only. Nginx is configured to cache POST requests:
+Old `tei_data`, `tei_cache` and `tei_log` named volumes are retained. Before starting the new mounts, copy any retained model files from the old `/data` into `.cache/tei/models`; stop the old services first and keep the source volume until verified. The old response-cache format/key is incompatible, so the new response cache starts cold; preserve the old volume rather than deleting it. The development host's old model/response volumes were empty during adoption. Preserve `.cache` across resets; bind-mounted `.state` requires scoped cleanup after stopping services.
 
-- **Cache key:** `${EMBEDDING_MODEL}|$scheme$proxy_host$uri|$request_body`
-  - Embeddings are deterministic for a given model + input, so the request body is a perfect cache discriminator.
-- **Cache zone:** `tei_cache` (1GB max, 30d inactive).
-- **Methods:** `proxy_cache_methods POST`
-- **Validity:** 200/201/204 cached for 1 day.
-- **Stampede protection:** `proxy_cache_lock on` with 30s timeouts.
-- **Stale serving:** Serves stale cache on TEI errors, timeouts, or 5xx.
+`bun run observability:check` verifies the published proxy with a mock inference origin and a real Loki service. It covers body/model identity, credential bypass, privacy, concurrent fills, stale responses and uncached health/metrics. It does not download a model or test GPU inference.
 
-## Headers
+Access stays on `https://tei.${TRAEFIK_BASE_DOMAIN}` through Traefik or `http://tei.127-0-0-1.sslip.io:8000` through the internal reverse proxy. Both services retain their `net-tei` aliases.
 
-- `X-Cache-Status` added to responses: `HIT`, `MISS`, `EXPIRED`, etc.
-
-## Access
-
-- Traefik: `https://tei.tmdb.127-0-0-1.sslip.io`
-- Direct: `http://tei.127-0-0-1.sslip.io:8000`
-
-## Logs
-
-JSON access logs include upstream timing and cache status.
-
-> [!TIP]  
-> When nginx makes multiple upstream attempts (due to timeouts or connection failures), the `urt`, `uct`, and `uht` fields will contain comma-separated values — one per attempt. A `-` indicates the value was unavailable for that attempt.
-
-Example:
+Access logs retain timing/cache fields and add host/route identity. Durations are seconds; upstream retry values are comma-separated, with missing values represented by `-` or an empty string. For example:
 
 ```json
-{
-  "args": "",
-  "bytes_sent": 12728,
-  "cache": "MISS",
-  "method": "POST",
-  "proxy_host": "tei-server.lokal:8080",
-  "remote_addr": "172.21.0.3",
-  "rt": 0.067,
-  "status": 200,
-  "time": "2026-04-29T13:49:35+00:00",
-  "uct": "0.000",
-  "uht": "0.067",
-  "uri": "/embed",
-  "urt": "0.067",
-  "user_agent": "Go-http-client/1.1"
-}
+{ "args": "", "bytes_sent": 12728, "cache": "MISS", "host": "tei.lokal", "method": "POST", "proxy_host": "route_embeddings", "route": "embeddings", "rt": 0.067, "status": 200, "time": "2026-10-18T00:00:00Z", "uct": "0.000", "uht": "0.067", "uri": "/embed", "urt": "0.067" }
 ```
-
-## Dependencies
-
-- `net-tei` — Internal Docker network.
-- Volumes: `tei_log`, `tei_data`, `tei_cache`.

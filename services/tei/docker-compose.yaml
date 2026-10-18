@@ -8,10 +8,29 @@ x-healthcheck: &healthcheck
 networks:
   net-tei:
 
-volumes:
-  tei_log:
-  tei_data:
-  tei_cache:
+configs:
+  tei-routes:
+    content: |
+      routes:
+        - name: embeddings
+          upstream: http://tei-server.lokal:8080
+          match: exact
+          prefix: /embed
+          cache:
+            methods: [POST]
+            ttl: 1d
+            ttl_mode: override
+            inactive: 30d
+            max_size: 1g
+            status_ttl: {"201": 1d, "204": 1d}
+            key:
+              namespace: "${EMBEDDING_MODEL:?}"
+            lock: {timeout: 30s, age: 30s}
+            stale: [error, timeout, http_500, http_502, http_503, http_504]
+        - name: inference_passthrough
+          upstream: http://tei-server.lokal:8080
+          cache:
+            enabled: false
 
 services:
   tei-server:
@@ -22,7 +41,7 @@ services:
       PORT: 8080
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
     volumes:
-      - tei_data:/data
+      - ${PWD}/.cache/tei/models:/data
     expose:
       - 8080
     networks:
@@ -45,15 +64,14 @@ services:
       test: [CMD, curl, -fsSL, http://0.0.0.0:8080/health]
 
   tei:
-    image: ${NGINX_IMAGE:?}
+    image: teyfix/cache-proxy:sha-208d7e1e9017793d5d1e7a4cc90c54a1de2f55f5
     restart: unless-stopped
     volumes:
-      - tei_log:/var/log/nginx
-      - tei_cache:/var/cache/tei
-      - ${PWD}/services/tei/nginx/default.conf:/etc/nginx/templates/default.conf.template
-    environment:
-      # Included in cache key to ensure cache is invalidated when model changes
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:?}
+      - ${PWD}/.state/tei/logs:/var/log/nginx
+      - ${PWD}/.cache/tei/responses:/var/cache/nginx
+    configs:
+      - source: tei-routes
+        target: /config/routes.yaml
     expose:
       - 8080
     networks:
@@ -81,4 +99,4 @@ services:
           memory: 128M
     healthcheck:
       <<: *healthcheck
-      test: [CMD, curl, -fsSL, http://0.0.0.0:4000/health]
+      test: [CMD, wget, -q, -O, /dev/null, http://127.0.0.1:8080/healthz]

@@ -1,6 +1,6 @@
 resources:
   - name: tei
-    access_file: /mnt/log/tei/tei_access.log
+    access_file: /mnt/log/tei/cache-proxy-access.jsonl
   - name: tmdb
     access_file: /mnt/log/tmdb/*-logs/cache-proxy-access.jsonl
 

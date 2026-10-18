@@ -15,7 +15,6 @@ volumes:
   grafana:
   lokidata:
   prometheus:
-  vector:
 
 services:
   prometheus:
@@ -142,28 +141,25 @@ services:
       test: [CMD, /bin/busybox, wget, -q, --spider, http://0.0.0.0:3100/ready]
 
   vector:
-    build:
-      dockerfile_inline: |
-        FROM ${VECTOR_IMAGE:?} AS runtime
-        RUN apk add --no-cache jq rsync inotify-tools
-        COPY --from=${GOMPLATE_IMAGE:?} /bin/gomplate /usr/local/bin/gomplate
+    image: teyfix/vector:sha-208d7e1e9017793d5d1e7a4cc90c54a1de2f55f5
     restart: unless-stopped
-    entrypoint: /bin/sh
-    user: root
-    command: /app/entrypoint.sh
+    environment:
+      PIPELINE_CONFIG: /config/collector.yaml
     volumes:
       - ${PWD}/services/metrics/vector:/app:ro
-      # Persistence
-      - vector:/var/lib/vector
+      - ${PWD}/services/metrics/config:/config:ro
+      # Persistence and native engine logs
+      - ${PWD}/.state/metrics/vector/data:/data
+      - ${PWD}/.state/metrics/vector/logs:/var/log/vector
       # Log exporter – Docker
       - /var/run/docker.sock:/var/run/docker.sock:ro
       # Log exporter – File
       - ${PWD}/.state/postgres/logs:/mnt/log/postgres:ro
       - ${PWD}/.state/pipeline/logs:/mnt/log/pipeline:ro
-      - tei_log:/mnt/log/tei:ro
+      - ${PWD}/.state/tei/logs:/mnt/log/tei:ro
       - ${PWD}/.state/tmdb:/mnt/log/tmdb:ro
       # Storage exporter – Executing `du -s` requires root
-      - tei_cache:/mnt/cache/tei:ro
+      - ${PWD}/.cache/tei/responses:/mnt/cache/tei:ro
       - ${PWD}/.cache/tmdb:/mnt/cache/tmdb:ro
     networks:
       net-loki:
@@ -176,8 +172,6 @@ services:
         limits:
           cpus: "2"
           memory: 512M
-    tmpfs:
-      - /tmp
     healthcheck:
       <<: *healthcheck
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:8686/health]
+      test: [CMD, /usr/local/libexec/teyfix/pipeline/healthcheck.sh]

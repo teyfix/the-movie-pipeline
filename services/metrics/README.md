@@ -1,44 +1,15 @@
-# Metrics & Observability
+# Observability collector
 
-This directory contains the full observability stack: **Prometheus**, **Grafana**, **Loki**, and **Vector**.
+Prometheus, Loki and Grafana keep their existing upstream services. The `vector` collector uses published `teyfix/vector`; the shared image owns Process Compose, staging/native validation, watching, readiness, reload and shutdown. The consumer shell watcher is removed.
 
-## Architecture
+`config/collector.yaml` selects a native gomplate render command. Static Vector fragments and the NGINX/storage templates remain under `vector/`; `render.json.tmpl` emits the shared filename/object interface. Templates use `.tmpl`. Rendering writes only into the image's private runtime directory. The image owns Vector API configuration and `/data`; consumer fragments own sources, transforms, outputs and metrics. All collector source and values are watched, while changing `collector.yaml` requires a restart.
 
-- **Prometheus** scrapes metrics from every service in the stack.
-- **Grafana** provisions datasources (Prometheus, Loki) and dashboards. The provisioned dashboard JSON is located at [`grafana/provisioning/dashboards/tmdb/pipeline.json`](grafana/provisioning/dashboards/tmdb/pipeline.json).
-- **Loki** aggregates logs with filesystem storage, 168-hour retention, and support for large log lines (up to 2MB).
-- **Vector** ships logs and metrics. It reads Docker container logs (via `docker.sock`), nginx access logs, PostgreSQL JSON logs, and storage usage metrics, then forwards them to Loki and a Prometheus exporter.
+The collector reads PostgreSQL, pipeline engine and cache-proxy JSON files, plus labeled Docker logs. TEI log paths now use the same shared access-log format as TMDB. NGINX retry timings are paired by attempt index before conversion to seconds; missing timings do not produce upstream histograms. Scheduled `du` sources report cache storage, including an explicit unavailable/zero result when a path cannot be read. Loki labels and the `vector.lokal:9598` Prometheus scrape target stay the same.
 
-## Vector Configuration
+Vector disk buffers/checkpoints live in `.state/metrics/vector/data`; native collector JSON logs live in `.state/metrics/vector/logs`. The old `vector` named volume is retained. Starting with a fresh checkpoint directory can replay retained source logs; migrate the old Vector data only while stopped if preserving checkpoints/buffers is needed. Keep reusable TEI/TMDB caches under `.cache`. `down -v` does not erase bind-mounted state; stop services before any explicit scoped reset.
 
-Vector uses **gomplate** to render `.gotpl` templates at runtime:
+Run `bun run observability:check` for the production configuration integration test. It uses isolated log/cache/state paths, a mock TEI origin and real Loki; verifies file log delivery, NGINX retry timing pairs, request/cache-storage metrics, last-valid retention and native reload; then removes only its temporary Compose stack. Test receipts and diagnostics remain under ignored `.state/observability-tests`. No model or GPU is required.
 
-- `nginx.yaml.gotpl` — Parses JSON access logs, expands multi-attempt upstream timings (`urt`, `uct`, `uht`), and emits Prometheus histograms.
-- `storage.yaml.gotpl` — Runs `storage.sh` periodically to report cache volume sizes.
-- `entrypoint.sh` — Renders configs on startup and watches for changes via `inotifywait`.
+Grafana still provisions its datasources and [pipeline dashboard](grafana/provisioning/dashboards/tmdb/pipeline.json). [Prometheus configuration](prometheus/prometheus.yaml) owns the service scrape jobs, and [Loki configuration](loki/config.yaml) owns ingestion limits and retention. Grafana, Loki and Prometheus retain their `grafana`, `lokidata` and `prometheus` named volumes and existing internal networks.
 
-## Log Routing
-
-| Source                 | Transform         | Destination       |
-| ---------------------- | ----------------- | ----------------- |
-| Docker logs            | `enrich_docker`   | Loki              |
-| Nginx logs (TEI, TMDB) | `enrich_nginx`    | Loki + Prometheus |
-| Postgres JSON logs     | `enrich_postgres` | Loki              |
-| Storage `du` exec      | `du_parse_all`    | Prometheus        |
-
-## Key Files
-
-- `prometheus/prometheus.yaml` — Scrape configs for all jobs (Redpanda, Postgres, PgBouncer, Vector, TEI, pipeline workers).
-- `grafana/provisioning/` — Dashboard and datasource definitions.
-- `loki/config.yaml` — Loki server config with ingestion limits and retention.
-- `vector/config/` — Vector sources, transforms, sinks, and the hot-reload entrypoint.
-
-## Access
-
-- **Grafana:** `https://grafana.${TRAEFIK_BASE_DOMAIN}` or `http://grafana.127-0-0-1.sslip.io:8000`
-- **Prometheus:** `https://prometheus.${TRAEFIK_BASE_DOMAIN}` or `http://prometheus.127-0-0-1.sslip.io:8000`
-
-## Dependencies
-
-- `net-grafana`, `net-loki`, `net-prometheus`, `net-vector` — Internal Docker networks.
-- Volumes: `grafana`, `lokidata`, `prometheus`, `vector`.
+Access stays on `https://grafana.${TRAEFIK_BASE_DOMAIN}` and `https://prometheus.${TRAEFIK_BASE_DOMAIN}` through Traefik, or their existing `grafana.127-0-0-1.sslip.io:8000` and `prometheus.127-0-0-1.sslip.io:8000` reverse-proxy routes.

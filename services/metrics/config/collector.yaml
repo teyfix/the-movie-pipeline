@@ -1,0 +1,15 @@
+source: /app
+watch: [/app]
+http:
+  bind: 0.0.0.0
+render:
+  command:
+    - gomplate
+    - --config
+    - /app/values/.gomplate.yaml
+    - --template
+    - nginx=/app/config/nginx.yaml.tmpl
+    - --template
+    - storage=/app/config/storage.yaml.tmpl
+    - --file
+    - /app/render.json.tmpl

@@ -25,6 +25,11 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    env:
+      NORMALIZE_RESOURCE_CPU: "2"
+      NORMALIZE_RESOURCE_MEM: 2G
+      INGEST_RESOURCE_CPU: "2"
+      INGEST_RESOURCE_MEM: 2G
     steps:
       - uses: actions/checkout@v7.0.1
       - name: Configure isolated development inputs

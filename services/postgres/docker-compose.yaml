@@ -6,8 +6,6 @@ x-healthcheck: &healthcheck
   start_interval: 1s
 
 volumes:
-  pglogs:
-  pgdata:
   pgadmin:
 
 networks:
@@ -17,50 +15,20 @@ networks:
 
 services:
   postgres:
-    # Use Supabase image for richer extension support (e.g https://fdw.dev)
-    # https://hub.docker.com/r/supabase/postgres
-    build:
-      dockerfile_inline: |
-        FROM ${POSTGRES_IMAGE:?}
-        COPY --from=${GOMPLATE_IMAGE:?} /bin/gomplate /usr/local/bin/gomplate
+    image: teyfix/postgres:sha-208d7e1e9017793d5d1e7a4cc90c54a1de2f55f5
     restart: unless-stopped
-    entrypoint:
-      - sh
-      - -c
-      - |-
-        mkdir -p /var/log/postgresql
-        chown postgres:postgres /var/log/postgresql
-        exec docker-entrypoint.sh "$@"
-      - --
-      - postgres
-      - -D
-      - /etc/postgresql
-      - -clog_destination=stderr,jsonlog
-      - -clogging_collector=on
-      - -clog_directory=/var/log/postgresql
-      - -clog_filename=postgresql-%Y-%m-%d_%H%M%S
-      - -clog_statement=none
-      - -clog_min_duration_statement=-1
-      - -cshared_preload_libraries=pg_stat_statements
     environment:
-      # Root user
-      POSTGRES_DB: ${POSTGRES_DB:?}
-      POSTGRES_USER: ${POSTGRES_USER:?}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
-
-      # App user
-      PG_USER: ${PG_USER:?}
       PG_PASSWORD: ${PG_PASSWORD:?}
-      PG_SCHEMA: ${PG_SCHEMA:?}
     volumes:
-      - pglogs:/var/log/postgresql
-      - pgdata:/var/lib/postgresql/data
-      - ${PWD}/services/postgres/postgres/tmdb.sh:/docker-entrypoint-initdb.d/tmdb.sh:ro
-      - ${PWD}/services/postgres/postgres/tmdb:/docker-entrypoint-initdb.d/tmdb:ro
-    expose:
-      - 5432
+      - ${PWD}/services/postgres/config:/config:ro
+      - ${PWD}/.state/postgres/data:/var/lib/postgresql/data
+      - ${PWD}/.state/postgres/logs:/var/log/postgresql
+      - ${PWD}/.state/postgres/pooler-logs:/var/log/pgbouncer
+    expose: [5432, 6432, 9187, 9127]
     networks:
       net-postgres: { aliases: [postgres.lokal] }
+      net-pgbouncer: { aliases: [pgbouncer.lokal] }
       traefik:
     deploy:
       resources:
@@ -70,7 +38,6 @@ services:
     shm_size: "${POSTGRES_RESOURCE_SHM:?}"
     labels:
       # Enable Traefik
-      - "traefik.enable=true"
 
       # Create the TCP service for PostgreSQL
       - "traefik.tcp.services.${TRAEFIK_SERVICE_PREFIX:?}_pg.loadBalancer.server.port=5432"
@@ -81,72 +48,10 @@ services:
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pg.tls.certResolver=${TRAEFIK_ACME_RESOLVER:?}"
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pg.entryPoints=${TRAEFIK_TCP_ENTRYPOINT:?}"
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pg.service=${TRAEFIK_SERVICE_PREFIX:?}_pg"
-    healthcheck:
-      <<: *healthcheck
-      test: [CMD, psql, -h, localhost, -U, "${PG_USER:?}", -d, "${POSTGRES_DB:?}", -c, "SELECT 1;"]
-
-  postgres-exporter:
-    image: ${POSTGRES_EXPORTER_IMAGE:?}
-    restart: unless-stopped
-    environment:
-      DATA_SOURCE_NAME: ${POSTGRES_ADMIN_URL:?}
-      PG_EXPORTER_EXTEND_QUERY_PATH: /app/queries.yaml
-    volumes:
-      - ${PWD}/services/postgres/postgres-exporter/queries.yaml:/app/queries.yaml:ro
-    expose:
-      - 9187
-    networks:
-      net-postgres: { aliases: [postgres-exporter.lokal] }
-    depends_on:
-      postgres:
-        condition: service_healthy
-    deploy:
-      resources:
-        limits:
-          cpus: "0.1"
-          memory: 32M
-    healthcheck:
-      <<: *healthcheck
-      # Postgres exporter does not have a healthcheck endpoint
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:9187/metrics]
-
-  pgbouncer:
-    build:
-      dockerfile_inline: |
-        FROM ${PGBOUNCER_IMAGE:?}
-        COPY --from=${GOMPLATE_IMAGE:?} /bin/gomplate /usr/local/bin/gomplate
-    entrypoint: /bin/sh
-    command: /app/entrypoint.sh
-    restart: unless-stopped
-    environment:
-      DB_HOST: postgres.lokal
-      DB_NAME: ${POSTGRES_DB:?}
-      DB_PASSWORD: ${PG_PASSWORD:?}
-      DB_USER: ${PG_USER:?}
-      AUTH_FILE: /tmp/app/userlist.txt
-      PGBOUNCER_USER: ${PGBOUNCER_USER:?}
-      PGBOUNCER_PASS: ${PGBOUNCER_PASS:?}
-      # Required for healthcheck
-      PGPASSWORD: ${PG_PASSWORD:?}
-    volumes:
-      - ${PWD}/services/postgres/pgbouncer/app:/app:ro
-      - ${PWD}/services/postgres/pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
-    tmpfs:
-      - /tmp
-    expose:
-      - 5432
-    networks:
-      net-pgbouncer: { aliases: [pgbouncer.lokal] }
-      net-postgres:
-      traefik:
-    depends_on:
-      postgres:
-        condition: service_healthy
-    labels:
       - "traefik.enable=true"
 
       # Create the TCP service for PostgreSQL
-      - "traefik.tcp.services.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.loadBalancer.server.port=5432"
+      - "traefik.tcp.services.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.loadBalancer.server.port=6432"
 
       # Create a router to expose the PostgreSQL service
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.rule=HostSNI(`pgbouncer.${TRAEFIK_BASE_DOMAIN:?}`)"
@@ -154,36 +59,25 @@ services:
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.tls.certResolver=${TRAEFIK_ACME_RESOLVER:?}"
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.entryPoints=${TRAEFIK_TCP_ENTRYPOINT:?}"
       - "traefik.tcp.routers.${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer.service=${TRAEFIK_SERVICE_PREFIX:?}_pgbouncer"
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 128M
-    healthcheck:
-      <<: *healthcheck
-      test: [CMD, psql, -h, localhost, -U, "${PG_USER:?}", -d, "${POSTGRES_DB:?}", -c, "SELECT 1;"]
 
-  pgbouncer-exporter:
-    image: ${PGBOUNCER_EXPORTER_IMAGE:?}
+  postgres-sql:
+    image: burningalchemist/sql_exporter:0.24.10
     restart: unless-stopped
+    command: [--config.file=/config/sql-exporter.yaml, --web.listen-address=:9399]
     environment:
-      PGBOUNCER_EXPORTER_CONNECTION_STRING: postgresql://${PGBOUNCER_USER:?}:${PGBOUNCER_PASS:?}@pgbouncer.lokal:5432/pgbouncer?sslmode=disable
-    expose:
-      - 9127
+      SQLEXPORTER_TARGET_DSN: postgresql://${PG_USER:?}:${PG_PASSWORD:?}@postgres.lokal:5432/${POSTGRES_DB:?}?sslmode=disable
+    volumes:
+      - ${PWD}/services/postgres/metrics:/config:ro
+    expose: [9399]
     networks:
-      net-pgbouncer: { aliases: [pgbouncer-exporter.lokal] }
+      net-postgres: { aliases: [postgres-sql.lokal] }
     depends_on:
-      pgbouncer:
-        condition: service_healthy
+      migrate: { condition: service_completed_successfully }
     deploy:
       resources:
         limits:
           cpus: "0.1"
-          memory: 32M
-    healthcheck:
-      <<: *healthcheck
-      # Pgbouncer exporter does not have a healthcheck endpoint
-      test: [CMD, wget, -q, --spider, http://0.0.0.0:9127/metrics]
+          memory: 64M
 
   pgadmin:
     image: ${PGADMIN_IMAGE:?}

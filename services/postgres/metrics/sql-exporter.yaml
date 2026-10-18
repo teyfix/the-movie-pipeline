@@ -1,0 +1,10 @@
+global:
+  min_interval: 30s
+  max_connections: 1
+  max_idle_connections: 1
+target:
+  name: tmdb
+  # 0.24.10 validates this field before applying SQLEXPORTER_TARGET_DSN.
+  data_source_name: postgresql://unused.invalid/tmdb
+  collectors: [tmdb]
+collector_files: [/config/tmdb.collector.yaml]

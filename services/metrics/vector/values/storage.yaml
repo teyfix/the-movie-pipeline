@@ -2,6 +2,6 @@ resources:
   - name: tei
     path: /mnt/cache/tei
   - name: tmdb_api
-    path: /mnt/cache/tmdb/tmdb_api
+    path: /mnt/cache/tmdb/api
   - name: tmdb_files
-    path: /mnt/cache/tmdb/tmdb_files
+    path: /mnt/cache/tmdb/files

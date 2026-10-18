@@ -1,0 +1,52 @@
+# =======================================
+# ========= prettier-plugin-sql =========
+# =======================================
+formatter: sql-formatter
+language: postgresql
+keywordCase: upper
+dataTypeCase: upper
+functionCase: lower
+identifierCase: preserve
+indentStyle: standard
+logicalOperatorNewline: before
+expressionWidth: 50
+linesBetweenQueries: 1
+denseOperators: false
+newlineBeforeSemicolon: false
+database: postgresql
+# =======================================
+# ====== prettier-plugin-sort-json ======
+# =======================================
+jsonRecursiveSort: true
+jsonSortOrder: |-
+  {
+    "id":null,
+    "type":null,
+    "name":null,
+    "title":null,
+    "/.*/":"lexical"
+  }
+# =======================================
+# ============== prettier ===============
+# =======================================
+plugins:
+  - prettier-plugin-embed
+  - prettier-plugin-sh
+  - prettier-plugin-sql
+  - prettier-plugin-sort-json
+  - prettier-plugin-packagejson
+  - prettier-plugin-compact-markdown-table
+printWidth: 8000
+objectWrap: collapse
+overrides:
+  - files: "*.sql.gotpl"
+    options:
+      parser: sql
+  - files: "*.yaml.gotpl"
+    options:
+      parser: yaml
+  - files:
+      - .vscode/*.json
+      - "*.ts"
+    options:
+      printWidth: 80

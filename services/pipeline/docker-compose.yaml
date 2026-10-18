@@ -19,7 +19,7 @@ x-pipeline: &pipeline
   user: root
   volumes:
     - ${PWD}/services/pipeline/app:/app:ro
-  
+
   tmpfs:
     - /config
     - /home/pipeline
@@ -74,7 +74,7 @@ services:
       SERVICE_NAME: seed
       DATADIR_TMDB: ${DATADIR_TMDB:?}
       DATADIR_VECTOR: ${DATADIR_VECTOR:?}
-      TMDB_FILES_API_URL: http://tmdb.lokal:9090
+      TMDB_FILES_API_URL: http://tmdb-files.lokal:8080
       TMDB_DOWNLOAD_INTERVAL_SECS: 3600
     volumes:
       - seed_tmdb:${DATADIR_TMDB:?}
@@ -87,7 +87,7 @@ services:
     depends_on:
       kafka-init: { condition: service_completed_successfully }
       redpanda: { condition: service_healthy }
-      tmdb: { condition: service_healthy }
+      tmdb-files: { condition: service_healthy }
     deploy:
       resources:
         limits:
@@ -107,7 +107,6 @@ services:
       <<: *connect-env
       SERVICE_NAME: enrich
       TMDB_API_URL: http://tmdb.lokal:8080
-      TMDB_API_SECRET: ${TMDB_API_SECRET:?}
     networks:
       net-kafka:
       net-pipeline: { aliases: [enrich.lokal] }
@@ -190,7 +189,7 @@ services:
       <<: *connect-env
       SERVICE_NAME: ingest
       PG_SCHEMA: ${PG_SCHEMA:?}
-      POSTGRES_URL: ${POSTGRES_URL:?}
+      POSTGRES_URL: postgresql://${PG_USER:?}:${PG_PASSWORD:?}@pgbouncer.lokal:6432/${POSTGRES_DB:?}?sslmode=disable
       INGEST_MAX_IN_FLIGHT: ${INGEST_MAX_IN_FLIGHT:?}
       INGEST_CONN_MAX_OPEN: ${INGEST_CONN_MAX_OPEN:?}
       INGEST_CONN_MAX_IDLE: ${INGEST_CONN_MAX_IDLE:?}
@@ -203,7 +202,7 @@ services:
     depends_on:
       kafka-init: { condition: service_completed_successfully }
       migrate: { condition: service_completed_successfully }
-      pgbouncer: { condition: service_healthy }
+      postgres: { condition: service_healthy }
       redpanda: { condition: service_healthy }
     deploy:
       resources:

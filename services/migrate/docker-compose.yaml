@@ -5,9 +5,9 @@ services:
       dockerfile: Dockerfile
       args:
         BUN_IMAGE: ${BUN_IMAGE:?}
-    command: [bun migrate]
+    command: [bun run migrate:run]
     environment:
-      POSTGRES_URL: ${POSTGRES_ADMIN_URL:?}
+      POSTGRES_URL: postgresql://postgres:${POSTGRES_PASSWORD:?}@postgres.lokal:5432/${POSTGRES_DB:?}?sslmode=disable
       POSTGRES_SCHEMA: ${PG_SCHEMA:?}
       MIGRATION_PATH: /app/drizzle
       EMBEDDING_DIMENSIONS_MAX: ${EMBEDDING_DIMENSIONS_MAX:?}

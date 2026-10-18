@@ -1,0 +1,36 @@
+name: Bloblang fixtures
+
+on:
+  pull_request:
+    paths:
+      - services/pipeline/app/**
+      - tests/bloblang/**
+      - scripts/test-bloblang.py
+      - .bloblangignore
+      - .github/workflows/bloblang.yml
+  push:
+    branches: [main]
+    paths:
+      - services/pipeline/app/**
+      - tests/bloblang/**
+      - scripts/test-bloblang.py
+      - .bloblangignore
+      - .github/workflows/bloblang.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fixtures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Install released Bloblang CLI
+        run: |
+          curl -fsSL --retry 3 https://github.com/teyfix/bloblang/releases/download/v0.5.1/blobl-v0.5.1-linux-amd64.tar.gz -o "$RUNNER_TEMP/blobl.tar.gz"
+          tar -xzf "$RUNNER_TEMP/blobl.tar.gz" -C "$RUNNER_TEMP" blobl
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+      - name: Test mappings against fixtures
+        run: python3 scripts/test-bloblang.py

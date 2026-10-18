@@ -1,0 +1,10 @@
+.cache/
+.state/
+.volumes/
+node_modules/
+**/node_modules/
+.env
+.env.*
+**/*.gotpl
+services/pipeline/app/*.yaml
+services/pipeline/app/out/

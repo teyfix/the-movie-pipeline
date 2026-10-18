@@ -148,3 +148,4 @@ plans/
 
 # Docker volume mounts
 .volumes/
+.state/

@@ -6,7 +6,7 @@ resources: {
 		download: prefix: ["movie", "adult_movie"]
 		enrich: {
 			filter: min_popularity: 1
-			api: endpoint:          "/3/movie/{{ data.id }}?append_to_response=alternative_titles,credits,images,keywords,lists,recommendations,release_dates,reviews,similar,translations,videos,watch_providers"
+			api: endpoint:          "/3/movie/{{ data.id }}?append_to_response=alternative_titles,credits,images,keywords,lists,recommendations,release_dates,reviews,similar,translations,videos,watch/providers"
 		}
 		normalize: {
 			kafka: {
@@ -37,7 +37,7 @@ resources: {
 		download: prefix: ["tv_series", "adult_tv_series"]
 		enrich: {
 			filter: min_popularity: 2
-			api: endpoint:          "/3/tv/{{ data.id }}?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch_providers"
+			api: endpoint:          "/3/tv/{{ data.id }}?append_to_response=alternative_titles,content_ratings,credits,episode_groups,images,keywords,lists,recommendations,reviews,screened_theatrically,similar,translations,videos,watch/providers"
 		}
 		normalize: {
 			kafka: {
@@ -147,7 +147,7 @@ resources: {
 	season: {
 		kind: "season"
 		enrich: {
-			api: endpoint: "/3/tv/{{ data.id }}/season/{{ data.season.season_number }}?append_to_response=credits,images,translations,videos,watch_providers"
+			api: endpoint: "/3/tv/{{ data.id }}/season/{{ data.season.season_number }}?append_to_response=credits,images,translations,videos,watch/providers"
 			transform: {
 				mapping: true
 			}
